@@ -180,6 +180,37 @@ function tipHtml(s) {
       <span>מוביל: ${BLOC_LABEL[s.lead]} · ${pct(share(s[s.lead], s.valid))}</span></div>`;
 }
 
+// The compact card a marker tap opens on a phone. There is no hover on touch, so
+// a tap used to go straight to the full site panel — which meant leaving the map
+// for another tab just to see what a circle was. The card answers that in place and
+// keeps the trip to the full data an explicit choice.
+function cardHtml(s) {
+  return `<div class="mcard">
+    <b>${esc(s.name)}</b>
+    <div class="ad">${esc(addressOf(s))} · ${s.n_kalpi} קלפיות</div>
+    <div class="row"><span>${POT_LABEL[state.potTarget]}</span><span class="v">${num(potValue(s))}</span></div>
+    <div class="row"><span>אחוז הצבעה</span><span class="v">${pct(s.turnout)}
+      <span class="muted" style="font-weight:400">${signed(deltaNat(s))} מהארצי</span></span></div>
+    <div class="row"><span>גוש מוביל</span><span class="v">
+      <span class="dot" style="background:${blocColor(s.lead)}"></span>${BLOC_LABEL[s.lead]}</span></div>
+    <button class="btn primary mcard-more" data-id="${s.id}">כל הנתונים באתר</button>
+  </div>`;
+}
+
+// Pointer devices get the hover tooltip; touch layouts get the tappable card.
+// Rebound on layout change so a resize does not leave the wrong one attached.
+function bindMarkerUI(m, s) {
+  m.unbindTooltip(); m.unbindPopup();
+  if (isNarrow()) {
+    m.bindPopup(() => cardHtml(s), {
+      className: 'mcard-popup', maxWidth: 260, minWidth: 200,
+      autoPanPadding: [12, 12], closeButton: true,
+    });
+  } else {
+    m.bindTooltip(tipHtml(s), { className: 'tip', direction: 'top', offset: [0, -6], sticky: false });
+  }
+}
+
 function buildMarkers() {
   markerLayer.clearLayers(); markers.clear();
   for (const s of [...sites].sort((a, b) => b.eligible - a.eligible)) {   // small markers last = on top
@@ -188,13 +219,23 @@ function buildMarkers() {
       radius: radiusOf(s), color: cssVar('--ring'), weight: 1.5, opacity: 1,
       fillColor: colorOf(s), fillOpacity: 0.85, className: 'site-marker',
     });
-    m.bindTooltip(tipHtml(s), { className: 'tip', direction: 'top', offset: [0, -6], sticky: false });
-    m.on('click', () => selectSite(s.id, false));
+    bindMarkerUI(m, s);
+    // on a narrow layout the bound popup handles the tap; anywhere else a click
+    // opens the full panel, which is already beside the map
+    m.on('click', () => { if (!isNarrow()) selectSite(s.id, false); });
     m.on('keypress', () => selectSite(s.id, false));
     markers.set(s.id, m);
   }
   restyleMarkers();
 }
+
+// the card is plain HTML inside a Leaflet popup, so its button is delegated
+map.getContainer().addEventListener('click', e => {
+  const b = e.target.closest('.mcard-more');
+  if (!b) return;
+  map.closePopup();
+  selectSite(+b.dataset.id, false);
+});
 
 function restyleMarkers() {
   const vis = new Set(visible().map(s => s.id));
@@ -413,7 +454,7 @@ function selectSite(id, fly) {
     renderDetail(s);
     if (s.lat != null) {
       if (fly) map.flyTo([s.lat, s.lon], Math.max(map.getZoom(), 16), { duration: 0.6 });
-      markers.get(id)?.openTooltip();
+      if (!isNarrow()) markers.get(id)?.openTooltip();
     }
   }
   restyleMarkers(); renderList();
@@ -557,7 +598,7 @@ function renderTable() {
 }
 
 // ---------------------------------------------------------------- wiring
-function renderAll() { renderLegend(); renderList(); restyleMarkers(); syncFilterSummary(); if (!$('#tableview').classList.contains('hidden')) renderTable(); }
+function renderAll() { map.closePopup(); renderLegend(); renderList(); restyleMarkers(); syncFilterSummary(); if (!$('#tableview').classList.contains('hidden')) renderTable(); }
 
 $('#modeSeg').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -640,6 +681,7 @@ document.addEventListener('keydown', e => {
 // list off-screen and unreachable on any phone.
 function setView(v) {
   document.body.dataset.view = v;
+  map.closePopup();          // it would otherwise linger, hidden, behind the other tab
   $$('#viewTabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
   // the map was display:none, so Leaflet has to re-measure before it draws
   if (v === 'map') setTimeout(() => { map.invalidateSize(); updateLabels(); }, 0);
@@ -700,6 +742,8 @@ if (isNarrow()) $('#filters').open = false;
 matchMedia('(max-width:1000px)').addEventListener('change', () => {
   if (!$('#tableview').classList.contains('hidden')) renderTable();
   $('#filters').open = !isNarrow();
+  map.closePopup();
+  for (const s of sites) { const m = markers.get(s.id); if (m) bindMarkerUI(m, s); }
   map.invalidateSize();
 });
 $('#btnTheme').textContent = matchMedia('(prefers-color-scheme: dark)').matches ? 'מצב בהיר' : 'מצב כהה';

@@ -210,6 +210,47 @@ Recorded because the scoping matters for whenever it comes back:
 
 ---
 
+# Round 2 — marker interaction on mobile
+
+**Reported:** tapping a circle on a phone jumps straight to the data, which feels bad.
+Suggestion: a small hover instead, with a link to the full data inside it.
+
+**Decided: a two-step tap.** A marker tap now opens a compact card *in place on the map*;
+the full site panel is reached only by an explicit `כל הנתונים באתר` button on that card.
+
+**Why it behaved that way.** Round 1 routed a marker tap through `selectSite`, which on a
+narrow layout switches to the list tab — so the answer to "what is this circle?" cost the
+user the map and a trip to another tab. On a pointer device this was never visible: the
+sidebar sits beside the map, so a click just fills a panel already on screen.
+
+**The mechanism, and why a tooltip could not do it.** There is no hover on touch, so
+Leaflet opens tooltips on tap — but tooltips are `interactive: false`, so a link inside
+one is not tappable. The card is a Leaflet **popup**, which is click-driven and can hold
+real controls. Bindings are chosen per layout (`bindMarkerUI`) and **re-bound when the
+viewport crosses the breakpoint**, so a resize never leaves the wrong one attached:
+
+| layout | tap / click a marker |
+|---|---|
+| pointer (>1000px) | hover tooltip; click opens the panel already beside the map |
+| touch (<=1000px) | compact card on the map; the panel only via its button |
+
+The card carries the four things that identify a site — name and address, the active
+potential figure, turnout with its national delta, and the leading bloc — and nothing
+else. List rows are unchanged: tapping one still opens the panel directly, because that
+is already a list interaction and costs no context.
+
+**Regression checks:** `phone_tap` asserts a marker tap leaves `view == 'map'` with the
+card open and the detail panel closed; `phone_card_more` asserts the button is what
+reaches the panel; `desktop_tap` asserts the pointer path is untouched.
+
+`cardTitleClearsClose` guards a smaller thing worth keeping: Leaflet pins its close
+button to the physical **top-right**, which under RTL is where the title text *begins*,
+so the gap belongs on the inline-start side. The check measures the text with a `Range`
+rather than the element box — a `display:block` title spans the full width and would
+always look like it overlaps.
+
+---
+
 ## Known issue, not fixed this round
 
 The **existing turnout ramp** fails the same light-end contrast check the new ramps pass:

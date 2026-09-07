@@ -44,6 +44,17 @@ CHECKS_JS = '''() => {
   r.tableCols = document.querySelectorAll('#tvBody thead th').length;
   r.tableRows = document.querySelectorAll('#tvBody tbody tr').length;
   r.menuOpen = q('#hdrActions')?.classList.contains('open');
+  r.popupOpen = !!q('.leaflet-popup');
+  r.cardMoreBtn = !!q('.mcard-more');
+  r.detailOpen = !!(q('.detail') && !q('.detail').classList.contains('hidden'));
+  r.tooltipBound = !!q('.leaflet-tooltip.tip');
+  r.cardTitleClearsClose = (() => {
+    const el = q('.mcard b'), c = q('.leaflet-popup-close-button');
+    if (!el || !c) return null;
+    const rng = document.createRange(); rng.selectNodeContents(el);
+    const t = rng.getBoundingClientRect(), cb = c.getBoundingClientRect();
+    return !(t.right > cb.left && t.left < cb.right && t.bottom > cb.top && t.top < cb.bottom);
+  })();
 
   const bad = [];
   document.querySelectorAll('.stat,.legendbox,.mapbar,.kpi,.chip,.seg button,.viewtabs button').forEach(e => {
@@ -118,6 +129,8 @@ def do(js):       return lambda pg: pg.evaluate(js)
 def mode(m):      return click(f'#modeSeg button[data-mode="{m}"]')
 def pot(t):       return do(f"const s=document.querySelector('#potTarget');s.value='{t}';s.dispatchEvent(new Event('change'))")
 def view(v):      return click(f'#viewTabs button[data-view="{v}"]')
+def tapMarker():  return lambda pg: pg.locator('path.site-marker').nth(60).click(force=True)
+def tapCardMore(): return click('.mcard-more')
 
 PHONE = dict(width=390, height=844, mobile=True)
 
@@ -154,6 +167,16 @@ scenarios = {
   'phone_table': ('light', (click('#btnMenu'), click('#btnTable')), PHONE, {'tableCols': 6}),
   'phone_detail':('light', (view('map'), do("document.querySelectorAll('.site')[2].click()")), PHONE,
                   {'view': 'list'}),
+  # tapping a circle must NOT leave the map — it opens a card in place
+  'phone_tap':   ('light', (tapMarker(),), PHONE,
+                  {'view': 'map', 'popupOpen': True, 'cardMoreBtn': True, 'detailOpen': False,
+                   'cardTitleClearsClose': True}),
+  # ...and the full panel is reached only by the explicit button on that card
+  'phone_card_more': ('light', (tapMarker(), tapCardMore()), PHONE,
+                  {'view': 'list', 'detailOpen': True, 'popupOpen': False}),
+  # a pointer layout keeps the hover tooltip and the direct click-to-panel
+  'desktop_tap': ('light', (tapMarker(),), {},
+                  {'detailOpen': True, 'popupOpen': False}),
   'phone_dark':  ('dark', (view('list'),), PHONE, {'listOnScreen': True}),
 }
 

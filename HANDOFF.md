@@ -42,8 +42,11 @@ Address→site match confidence, carried over from the spreadsheet: 133 גבוה
 ## What the map does
 
 * One marker per site; marker **area** ∝ voters at that site.
-* Three color modes, **turnout is the default**: **turnout** (single-hue sequential ramp),
-  **leading bloc** (categorical), **bloc margin** (diverging blue↔orange, gray midpoint).
+* Five color modes, **potential is the default**: **potential** (votes left on the table,
+  sequential on the selected bloc's hue), **turnout** (single-hue sequential ramp),
+  **delta vs the national average** (rose deficit ramp), **leading bloc** (categorical),
+  **bloc margin** (diverging blue<->orange, gray midpoint). The list defaults to
+  potential-descending, and below 1000px the map and list are separate tabs.
 * Filters: free text (site name, address, station number, iron number), minimum turnout,
   leading bloc. Markers, list, legend counts and table all follow the active filter.
 * Click a site → detail panel: bloc split, largest parties, a collapsible per-station
@@ -107,6 +110,30 @@ overlays escaping their container, and the table view covering the map. Screensh
    empty `divIcon`.
 7. `.bar .track` / `.fill` were inline spans, so bar fills had zero height. Both are
    `display:block` now.
+8. **The whole UI below the map was unreachable on a phone.** `.app{height:100vh;
+   overflow:hidden}` means the document can never scroll; the stacked mobile layout
+   then left the sidebar 126px for panels that needed 338px, so on a 390x844 screen the
+   search box sat 1px below the fold, the sort control 222px off-screen and the site
+   list rendered at **zero height**. Map and list are separate tabs below 1000px now.
+   Regression check: the `phone_*` scenarios, which assert reachability.
+9. **The `narrow` test scenario hid #8 for a whole release.** It ran at 900x1100 and
+   asserted `listItems == 140` — a count of DOM nodes, which passes fine when the list
+   has no height. Assert visibility (`listOnScreen`, `listH`), never DOM presence.
+10. Bug #3 came back, in the new potential ramp: labels were written largest-first while
+   the swatches run lightest-first, so "1,600+" sat under the palest colour. Regression
+   check: `rampFirstLabel` in `test_map.py`. **The ramp's first DOM swatch renders on
+   the RIGHT under RTL — labels must be authored in that same order.**
+11. `.main` is a flex row, so under `direction:rtl` its FIRST DOM child takes the right
+   edge. `.mapwrap` was first, which put the control panel on the left of a Hebrew UI.
+   `.sidebar` leads now (which also fixes tab and screen-reader order); an `order:`
+   property would have fixed the paint and left both wrong.
+
+## Product decisions
+
+**`PRODUCT_DECISIONS.md`** records the PM requirements, the decision taken on each, the
+reasoning, and what was deferred (nationwide coverage) with its scoping. Read it before
+changing the potential formula, the delta baseline, the palette or the mobile layout —
+several of those choices look arbitrary without the measurements behind them.
 
 ## Color rules being followed (dataviz skill)
 
@@ -116,6 +143,22 @@ CVD checks in both modes. The sequential turnout ramp starts at `#86b6ef` so the
 step clears the 2:1 floor. The diverging margin scale reuses the same blue/orange bloc hues
 so a bloc keeps its color across modes. If you change any palette, re-run the validator:
 `node <dataviz-skill>/scripts/validate_palette.js "<hex,hex,...>" --mode light`.
+
+The **turnout-delta ramp is rose (OKLCH hue 0)**, chosen by measurement after two
+candidates were rejected: gold collapses to **dE 2.5** against the opposition orange
+under deuteranopia (a colourblind reader would read "below baseline" as "opposition"),
+and crimson at hue 25 lands **dE 4.7**. Rose clears **11.2** from orange and **12.5**
+from blue, and passes the ordinal checks (monotone L, adjacent dL >= 0.06, light-end
+contrast >= 2:1, single hue) in both modes. It is **sequential, not diverging**, because
+against the national baseline 123 of the 140 sites are below it — a symmetric scale would
+spend half its range on 17 sites. The **potential ramps are sequential ramps on the
+existing bloc hues**, so hue keeps meaning "which bloc" and lightness carries the
+magnitude; all six were validated the same way.
+
+**Known, not fixed:** the turnout ramp's lightest step `--seq-0:#eadcf3` measures
+**1.28:1** against the light surface, below the 2:1 ordinal floor — this document's
+claim that it "starts at `#86b6ef`" does not match the shipped value. Left alone
+deliberately: changing it alters the appearance of the most-used mode.
 
 ## Known limitations (documented in the UI, not defects)
 

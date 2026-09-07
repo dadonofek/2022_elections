@@ -18,21 +18,40 @@ need an internet connection.
   **eligible voters** the site serves (not the number who voted), so a large pale
   marker in turnout mode is a big electorate that largely stayed home. Marker
   **color** follows the selected mode.
-* **Three color modes** (*אחוז הצבעה* is the default)
+* **Five color modes** (*פוטנציאל* is the default)
+  * *פוטנציאל* — how many votes are sitting at this site and did not turn up:
+    `eligible x (1 - turnout) x the bloc's share of the votes cast here`. A
+    `הגוש שלי` selector picks whose votes to count; unset, it shows raw non-voters.
+    Hue says *which* bloc, lightness says *how many*, and the marker area follows
+    the potential rather than the electorate. **It is an estimate, not a forecast** —
+    see the caveats in *על הנתונים*.
   * *אחוז הצבעה* — turnout, as a **purple** light→dark ramp, deliberately not a bloc
     colour so it never reads as "everything voted for one party".
+  * *פער מהארצי* — each site against the **national** turnout of the same election
+    (70.63%), as a rose deficit ramp with one neutral step for sites at or above it.
+    The baseline is national, not the city's own mean, because against the city mean
+    half the sites sit above it by construction and nothing reads as low. The gap
+    from the city average is shown too, per site and in the table.
   * *גוש מוביל* — which bloc led at the site (categorical: blue / orange / green).
-  * *פער בין הגושים* — coalition-minus-opposition margin, a diverging blue↔orange
+  * *פער בין הגושים* — coalition-minus-opposition margin, a diverging blue<->orange
     scale with a neutral gray midpoint.
 * **Filters** by free text (site name, address, station number or "iron" number),
   a turnout **range** (min *and* max sliders), and leading bloc. The list, the
-  markers, the legend counts and the table all follow the active filter.
+  markers, the legend counts and the table all follow the active filter. The list
+  is sorted by **potential, descending** by default, so it reads as a task list.
+* **Mobile**: below 1000px the map and the list are separate tabs (*מפה* / *רשימה*),
+  the filters fold into a collapsible section, the secondary controls move into a
+  hamburger, and the header shows three statistics with the rest behind *עוד*.
 * **Site detail** (click a marker or a list row): bloc split, largest parties, a
   collapsible per-station breakdown (*פירוט לפי קלפי*, collapsed by default), the full
   vote table, and the location accuracy for that site.
 * **Table view** — every field for all 140 sites or all 424 stations, sortable by any column.
 * **Site labels**, dark mode, and an **על הנתונים** panel documenting sources, bloc
   definitions and limitations.
+
+Product requirements, the decisions taken on them and what was deliberately deferred
+are recorded in **`PRODUCT_DECISIONS.md`** — read it before changing the metrics, the
+palette or the mobile layout.
 
 ## Data and provenance
 
@@ -45,7 +64,12 @@ need an internet connection.
 
 All 424 rows in the spreadsheet were re-verified against `expb.csv`: station counts,
 eligible voters and voters match exactly. City totals: 253,292 eligible, 140,650 voters,
-**55.53% turnout**, 139,764 valid votes.
+**55.53% turnout**, 139,764 valid votes — and **112,642 non-voters**, a pool 80% the size
+of the electorate that did vote.
+
+The **national** turnout used as the delta baseline (70.63%) is recomputed by
+`build_data.py` from all 12,545 stations in `expb.csv`; `config.NATIONAL_TURNOUT` is the
+fallback when that file is absent.
 
 **Location accuracy** (per site, also shown in the UI): 35 snapped to an identified OSM
 building, 13 exact house numbers, 80 street-centroid only, 12 approximate. A street-centroid
@@ -114,7 +138,20 @@ python3 test_map.py                      # all scenarios
 python3 test_map.py dark                 # one scenario
 ```
 
-Ten scenarios (light, dark, each color mode, detail, labels, table, filter, search, narrow
-viewport) are rendered headlessly and checked for JS errors, failed requests, horizontal
-overflow, clipped controls, markers and tiles actually rendering, overlays escaping their
-container, and the table view fully covering the map. Screenshots land in `build/`.
+Twenty-seven scenarios — light, dark, each of the five color modes, each potential
+target, detail, labels, table, sorting, filter, search, and **eight phone scenarios at
+390x844 with touch** — are rendered headlessly and checked for JS errors, failed
+requests, horizontal overflow, clipped controls, markers and tiles rendering, overlays
+escaping their container, the table view covering the map, the sidebar sitting to the
+right of the map under RTL, and legend ramp labels running in the same direction as
+their swatches. Screenshots land in `build/`.
+
+The phone scenarios assert controls are **reachable** — on screen, with real size — not
+merely present in the DOM. An earlier suite checked `listItems == 140`, a count of DOM
+nodes, and passed while the site list rendered at zero height off the bottom of every
+phone screen.
+
+Basemap tiles need the network; when they cannot be reached the row is marked `*` and
+the tile assertions are skipped so the suite still runs offline. Set
+`PLAYWRIGHT_CHROMIUM_PATH` to point the launcher at a specific Chromium when the
+installed browser build does not match the installed Playwright.

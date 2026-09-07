@@ -23,6 +23,21 @@ def bloc_totals(parties):
     t['opposition'] = t['zionist_opp'] + t['arab']
     return t
 
+def potential(o):
+    """Votes a bloc left on the table at this site, per the PM's formula:
+    eligible x (1 - turnout) x that bloc's share of the valid votes cast here.
+
+    eligible x (1 - turnout) IS the non-voter count, so this reads: if the people
+    who did not vote here had voted the way their neighbours who did vote did, how
+    many votes would each bloc have gained. That "if" is an assumption, not a
+    forecast - the UI labels the field an estimate and states it in the about panel.
+    """
+    nv, valid = o['non_voters'], o['valid']
+    if not valid:
+        return {k: 0 for k in ('coalition', 'opposition', 'other')}
+    return {k: round(nv * o[k] / valid) for k in ('coalition', 'opposition', 'other')}
+
+
 # --- station level -------------------------------------------------------
 for s in stations:
     g = geo.get(s['address'])
@@ -35,6 +50,7 @@ for s in stations:
     s['geo_precision'] = precision(g)
     s['geo_display'] = g['display'] if g else None
     s['turnout'] = round(100 * s['voters'] / s['eligible'], 2) if s['eligible'] else 0
+    s['non_voters'] = s['eligible'] - s['voters']
     b = bloc_totals(s['parties'])
     s.update(b)
     s['other'] = s['valid'] - b['coalition'] - b['opposition']
@@ -59,7 +75,7 @@ for s in stations:
     st['kalpiot'].append({
         'kalpi': s['kalpi'], 'barzel': s['barzel'], 'eligible': s['eligible'],
         'voters': s['voters'], 'turnout': s['turnout'], 'valid': s['valid'],
-        'invalid': s['invalid'], 'coalition': s['coalition'],
+        'invalid': s['invalid'], 'non_voters': s['non_voters'], 'coalition': s['coalition'],
         'opposition': s['opposition'], 'other': s['other'], 'lead': s['lead'],
         'parties': s['parties'],
     })
@@ -78,6 +94,8 @@ for i, ((name, addr), st) in enumerate(sorted(sites.items(), key=lambda kv: kalp
     top = max((('coalition', b['coalition']), ('opposition', b['opposition']), ('other', st['other'])), key=lambda x: x[1])
     st['lead'] = top[0] if st['valid'] else 'none'
     st['margin'] = round(100 * (b['coalition'] - b['opposition']) / st['valid'], 2) if st['valid'] else 0
+    st['non_voters'] = st['eligible'] - st['voters']
+    st['pot'] = potential(st)
     st['n_kalpi'] = len(st['kalpiot'])
     st['top_parties'] = sorted(((p, v) for p, v in st['parties'].items() if v > 0), key=lambda x: -x[1])[:8]
     out_sites.append(st)
@@ -122,6 +140,27 @@ cb = bloc_totals(city['parties'])
 city.update(cb)
 city['other'] = city['valid'] - cb['coalition'] - cb['opposition']
 city['turnout'] = round(100 * city['voters'] / city['eligible'], 2)
+city['non_voters'] = city['eligible'] - city['voters']
+city['pot'] = potential(city)
+
+# National turnout is the map's primary delta baseline. Recompute it from the
+# official national per-station file when it is available so the number is derived
+# rather than asserted; fall back to the documented constant otherwise.
+def national_turnout():
+    import csv, os
+    path = 'data/expb.csv'
+    if not os.path.exists(path):
+        return config.NATIONAL_TURNOUT, 'config.NATIONAL_TURNOUT'
+    with open(path, encoding='utf-8-sig') as fh:
+        rows = csv.reader(fh)
+        hdr = next(rows)
+        i_e, i_v = hdr.index('בזב'), hdr.index('מצביעים')
+        e = v = 0
+        for r in rows:
+            e += int(r[i_e]); v += int(r[i_v])
+    return (round(100 * v / e, 2), f'{path} ({v:,}/{e:,})') if e else (config.NATIONAL_TURNOUT, 'fallback')
+
+city['national_turnout'], _nt_src = national_turnout()
 
 payload = {'city': city, 'sites': out_sites, 'party_names': PARTY_NAMES, 'blocs': BLOCS}
 json.dump(payload, open('data/map_data.json', 'w'), ensure_ascii=False, separators=(',', ':'))
@@ -132,5 +171,7 @@ print('kalpiot without coords:', sum(1 for s in stations if s['lat'] is None))
 from collections import Counter
 print('precision:', Counter(s['geo_precision'] for s in out_sites))
 print('co-located sites spread apart:', spread)
+print('national turnout %:', city['national_turnout'], 'from', _nt_src)
+print('city non-voters:', city['non_voters'], '| potential', city['pot'])
 print('city turnout %:', city['turnout'], '| coalition', cb['coalition'], 'opp', cb['opposition'], 'other', city['other'])
 print('json size KB:', round(len(open('data/map_data.json').read().encode())/1024))

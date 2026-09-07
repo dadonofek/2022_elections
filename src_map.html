@@ -19,6 +19,17 @@
   --div-opp-3:#c94f1c; --div-opp-2:#ef8f5f; --div-opp-1:#f6c3a7;
   --div-mid:#e6e4df;
   --div-coal-1:#9ec5f4; --div-coal-2:#3987e5; --div-coal-3:#1c5cab;
+  /* turnout-delta ramp (rose). Sequential, not diverging: measured against the
+     national average 123 of Haifa's 140 sites sit below it, so the data is
+     one-sided. Rose is the one hue far enough from the coalition blue and the
+     opposition orange to never read as a bloc (worst CVD dE 11.2 / 12.5);
+     validated with the dataviz skill's validator as an ordinal ramp. */
+  --dlt-none:#b0ada4;
+  --dlt-0:#fe87af; --dlt-1:#e46f97; --dlt-2:#ca5881; --dlt-3:#b0416b; --dlt-4:#972956;
+  /* potential ramps: hue says WHICH bloc, lightness says HOW MANY votes */
+  --pot-coal-0:#7db5ff; --pot-coal-1:#509cfd; --pot-coal-2:#3784e4; --pot-coal-3:#1d6dca; --pot-coal-4:#0557ac;
+  --pot-opp-0:#fe9671; --pot-opp-1:#f5713e; --pot-opp-2:#db5923; --pot-opp-3:#bf4301; --pot-opp-4:#9c3604;
+  --pot-oth-0:#42c891; --pot-oth-1:#1caf7a; --pot-oth-2:#149567; --pot-oth-3:#0c7c55; --pot-oth-4:#056443;
   --shadow:0 1px 2px rgba(0,0,0,.06),0 6px 20px rgba(0,0,0,.08);
   --radius:10px;
   --sidebar-w:380px;
@@ -36,6 +47,11 @@
     --div-opp-3:#f0a077; --div-opp-2:#d95926; --div-opp-1:#8a4423;
     --div-mid:#383835;
     --div-coal-1:#1c5cab; --div-coal-2:#3987e5; --div-coal-3:#9ec5f4;
+    --dlt-none:#5b5b54;
+    --dlt-0:#8f204f; --dlt-1:#a83964; --dlt-2:#c1507a; --dlt-3:#db6890; --dlt-4:#f57fa7;
+    --pot-coal-0:#004c9a; --pot-coal-1:#0961bd; --pot-coal-2:#2a78d6; --pot-coal-3:#438ff0; --pot-coal-4:#66a8fe;
+    --pot-opp-0:#8b2e00; --pot-opp-1:#ab3d06; --pot-opp-2:#cd4c0f; --pot-opp-3:#e76530; --pot-opp-4:#fd8051;
+    --pot-oth-0:#09583c; --pot-oth-1:#01714c; --pot-oth-2:#088a5e; --pot-oth-3:#11a371; --pot-oth-4:#32bc86;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.5);
   }
 }
@@ -51,6 +67,11 @@
   --div-opp-3:#f0a077; --div-opp-2:#d95926; --div-opp-1:#8a4423;
   --div-mid:#383835;
   --div-coal-1:#1c5cab; --div-coal-2:#3987e5; --div-coal-3:#9ec5f4;
+  --dlt-none:#5b5b54;
+  --dlt-0:#8f204f; --dlt-1:#a83964; --dlt-2:#c1507a; --dlt-3:#db6890; --dlt-4:#f57fa7;
+  --pot-coal-0:#004c9a; --pot-coal-1:#0961bd; --pot-coal-2:#2a78d6; --pot-coal-3:#438ff0; --pot-coal-4:#66a8fe;
+  --pot-opp-0:#8b2e00; --pot-opp-1:#ab3d06; --pot-opp-2:#cd4c0f; --pot-opp-3:#e76530; --pot-opp-4:#fd8051;
+  --pot-oth-0:#09583c; --pot-oth-1:#01714c; --pot-oth-2:#088a5e; --pot-oth-3:#11a371; --pot-oth-4:#32bc86;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.5);
 }
 
@@ -66,7 +87,7 @@ body{
 
 /* ---------- header ---------- */
 header{
-  display:flex; align-items:center; gap:20px; flex-wrap:wrap;
+  display:flex; align-items:center; gap:20px; flex-wrap:wrap; position:relative;
   padding:10px 18px; background:var(--surface-1);
   border-bottom:1px solid var(--border); z-index:20;
 }
@@ -78,7 +99,9 @@ header{
   border-radius:var(--radius); padding:5px 11px; min-width:82px;
 }
 .stat .v{font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.2}
-.stat .k{font-size:11px; color:var(--text-muted)}
+.stat .k{font-size:11px; color:var(--text-muted); white-space:nowrap}
+.btn.statsmore{display:none; padding:5px 9px; font-size:12px}
+.hamburger{display:none; font-size:16px; line-height:1; padding:7px 11px}
 .hdr-actions{display:flex; gap:6px}
 
 /* ---------- buttons ---------- */
@@ -90,6 +113,7 @@ button{font:inherit; color:inherit; cursor:pointer}
 .btn:hover{background:var(--surface-2)}
 .btn.primary{background:var(--accent); color:var(--accent-ink); border-color:transparent}
 .seg{display:flex; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:2px; gap:2px}
+.seg.grid3{display:grid; grid-template-columns:repeat(3,1fr)}
 .seg button{
   flex:1; border:0; background:transparent; border-radius:7px;
   padding:6px 8px; font-size:12.5px; color:var(--text-secondary); white-space:nowrap;
@@ -106,7 +130,7 @@ button{font:inherit; color:inherit; cursor:pointer}
 .sidebar{
   position:relative;                      /* the detail overlay is positioned against this */
   width:var(--sidebar-w); flex:0 0 var(--sidebar-w);
-  background:var(--surface-1); border-inline-start:1px solid var(--border);
+  background:var(--surface-1); border-inline-end:1px solid var(--border);
   display:flex; flex-direction:column; min-height:0; z-index:10;
 }
 .panel{padding:12px 14px; border-bottom:1px solid var(--border)}
@@ -155,7 +179,7 @@ input[type=range]{width:100%; accent-color:var(--accent)}
   border:0; border-bottom:1px solid var(--border); padding:9px 14px;
 }
 .site:hover{background:var(--surface-2)}
-.site[aria-current="true"]{background:var(--surface-2); box-shadow:inset 3px 0 0 var(--accent)}
+.site[aria-current="true"]{background:var(--surface-2); box-shadow:inset -3px 0 0 var(--accent)}
 .site .t{display:flex; align-items:center; gap:7px}
 .site .nm{font-weight:600; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .site .ad{font-size:12px; color:var(--text-muted); margin-top:1px}
@@ -282,12 +306,73 @@ table.full tbody tr:hover{background:var(--surface-2)}
 .hidden{display:none !important}
 .empty{padding:24px 14px; text-align:center; color:var(--text-muted); font-size:13px}
 
+/* ---------- mobile view tabs (shown only in the stacked layout) ---------- */
+.viewtabs{display:none}
+.filters > summary{display:none}
+.filters{border:0}
+
 @media (max-width:1000px){
   :root{--sidebar-w:100%}
+  .brand h1{font-size:15px}
+  .brand p{display:none}
+  header{gap:10px; padding:8px 12px}
+
+  /* only the first three tiles ride along; the rest wait behind "עוד" */
+  .stats{width:100%; margin-inline-start:0; gap:5px}
+  .stats .stat{flex:1 1 calc(33.333% - 4px); min-width:0; padding:5px 8px}
+  .stats .stat .v{font-size:15px}
+  .stats:not(.expanded) .stat:nth-child(n+4){display:none}
+  .btn.statsmore{display:block}
+
+  /* the three utility buttons collapse into a hamburger menu */
+  .hamburger{display:block; margin-inline-start:auto}
+  .hdr-actions{
+    position:absolute; top:100%; inset-inline-end:10px; flex-direction:column;
+    background:var(--surface-1); border:1px solid var(--border); border-radius:10px;
+    box-shadow:var(--shadow); padding:6px; z-index:900; min-width:160px;
+  }
+  .hdr-actions:not(.open){display:none}
+  .hdr-actions .btn{text-align:start; border:0; background:transparent; padding:9px 10px}
+  .hdr-actions .btn:hover{background:var(--surface-2)}
+
+  /* THE FIX: map and list are separate tabs, so neither squeezes the other to
+     zero height. Before this, the sidebar got ~126px on a 390x844 phone while
+     its panels needed ~338px, and nothing below the map was reachable at all. */
   .main{flex-direction:column}
-  .mapwrap{height:52vh; flex:none}
-  .sidebar{flex:1; border-inline-start:0; border-top:1px solid var(--border)}
-  .stats{width:100%; margin-inline-start:0}
+  .mapwrap{flex:1; min-height:0; height:auto}
+  .sidebar{flex:1; border-inline-end:0; border-top:1px solid var(--border); min-height:0}
+  body[data-view="list"] .mapwrap{display:none}
+  body[data-view="map"] .sidebar{flex:0 0 auto}
+  body[data-view="map"] .sidebar > *:not(.viewtabs){display:none}
+
+  .viewtabs{
+    display:grid; grid-template-columns:1fr 1fr; gap:2px; flex:none;
+    padding:6px 8px; border-bottom:1px solid var(--border); background:var(--surface-2);
+  }
+  .viewtabs button{
+    border:0; background:transparent; border-radius:7px; padding:9px 8px;
+    font-size:13px; font-weight:600; color:var(--text-secondary);
+  }
+  .viewtabs button[aria-pressed="true"]{
+    background:var(--surface-1); color:var(--text-primary); box-shadow:0 1px 2px rgba(0,0,0,.08);
+  }
+
+  /* filters fold away so the list — the reason to be on this tab — gets the room */
+  .filters{flex:none}
+  .filters > summary{
+    display:flex; align-items:center; gap:8px; padding:10px 14px;
+    border-bottom:1px solid var(--border); font-size:12.5px; font-weight:700;
+    color:var(--text-secondary); cursor:pointer; list-style:none; user-select:none;
+  }
+  .filters > summary::-webkit-details-marker{display:none}
+  .filters > summary::before{content:"\25B8"; display:inline-block}
+  .filters[open] > summary::before{content:"\25BE"}
+  .filters > summary .sum{margin-inline-start:auto; font-weight:400; color:var(--text-muted)}
+  .filters[open]{overflow-y:auto; max-height:60vh}
+
+  .legendbox{width:190px; bottom:28px; padding:8px 10px}
+  .tv-head{flex-wrap:wrap}
+  .modal{padding:10px}
 }
 </style>
 </head>
@@ -300,7 +385,9 @@ table.full tbody tr:hover{background:var(--surface-2)}
       <p>424 קלפיות ב-140 אתרי הצבעה · נובמבר 2022 · תוצאות רשמיות של ועדת הבחירות המרכזית</p>
     </div>
     <div class="stats" id="stats"></div>
-    <div class="hdr-actions">
+    <button class="btn statsmore" id="btnStatsMore" aria-expanded="false">עוד</button>
+    <button class="btn hamburger" id="btnMenu" aria-expanded="false" aria-label="תפריט">☰</button>
+    <div class="hdr-actions" id="hdrActions">
       <button class="btn" id="btnAbout">על הנתונים</button>
       <button class="btn" id="btnTable">טבלה</button>
       <button class="btn" id="btnTheme" title="החלפת ערכת צבעים">מצב כהה</button>
@@ -308,6 +395,71 @@ table.full tbody tr:hover{background:var(--surface-2)}
   </header>
 
   <div class="main">
+    <aside class="sidebar">
+      <div class="viewtabs" id="viewTabs" role="group" aria-label="מפה או רשימה">
+        <button data-view="map" aria-pressed="false">מפה</button>
+        <button data-view="list" aria-pressed="true">רשימה</button>
+      </div>
+
+      <details class="filters" id="filters" open>
+        <summary>סינון וצביעה <span class="sum" id="filtSummary"></span></summary>
+        <div class="panel">
+          <h2>צביעת הסמנים</h2>
+          <div class="seg grid3" id="modeSeg" role="group" aria-label="בחירת צביעה">
+            <button data-mode="potential" aria-pressed="true">פוטנציאל</button>
+            <button data-mode="turnout" aria-pressed="false">אחוז הצבעה</button>
+            <button data-mode="delta" aria-pressed="false">פער מהארצי</button>
+            <button data-mode="lead" aria-pressed="false">גוש מוביל</button>
+            <button data-mode="margin" aria-pressed="false">פער בין הגושים</button>
+          </div>
+          <div class="field" id="potTargetField" style="margin-top:10px">
+            <label class="lab" for="potTarget">הגוש שלי — למי שייכים הקולות שלא הגיעו</label>
+            <select id="potTarget">
+              <option value="none">כל מי שלא הצביע (ללא שיוך)</option>
+              <option value="coalition">קואליציית 2022</option>
+              <option value="opposition">אופוזיציה רחבה</option>
+              <option value="other">רשימות אחרות</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>סינון</h2>
+          <div class="field">
+            <input type="search" id="q" placeholder="חיפוש לפי שם אתר, כתובת או מספר קלפי" aria-label="חיפוש">
+          </div>
+          <div class="field">
+            <label class="lab">טווח אחוז הצבעה: <span class="rangeval" id="turnoutVal">0%–100%</span></label>
+            <div class="dualrange">
+              <input type="range" id="turnoutMin" min="0" max="100" step="1" value="0" aria-label="אחוז הצבעה מינימלי">
+              <input type="range" id="turnoutMax" min="0" max="100" step="1" value="100" aria-label="אחוז הצבעה מקסימלי">
+            </div>
+          </div>
+          <div class="field">
+            <label class="lab">גוש מוביל באתר</label>
+            <div class="chips" id="blocChips"></div>
+          </div>
+        </div>
+      </details>
+
+      <div class="listhead">
+        <span id="count"></span>
+        <select id="sort" aria-label="מיון">
+          <option value="pot_desc">פוטנציאל — מהגבוה</option>
+          <option value="turnout_asc">אחוז הצבעה — מהנמוך</option>
+          <option value="delta_asc">פער מהארצי — מהגדול</option>
+          <option value="turnout_desc">אחוז הצבעה — מהגבוה</option>
+          <option value="voters_desc">מספר מצביעים</option>
+          <option value="coal_desc">שיעור קואליציה 2022</option>
+          <option value="opp_desc">שיעור אופוזיציה רחבה</option>
+          <option value="kalpi">לפי מספר קלפי</option>
+        </select>
+      </div>
+      <div class="scroll" id="list"></div>
+
+      <div class="detail hidden" id="detail"></div>
+    </aside>
+
     <div class="mapwrap">
       <div id="map"></div>
       <div class="mapbar">
@@ -316,50 +468,6 @@ table.full tbody tr:hover{background:var(--surface-2)}
       </div>
       <div class="legendbox" id="legend"></div>
     </div>
-
-    <aside class="sidebar">
-      <div class="panel">
-        <h2>צביעת הסמנים</h2>
-        <div class="seg" id="modeSeg" role="group" aria-label="בחירת צביעה">
-          <button data-mode="lead" aria-pressed="false">גוש מוביל</button>
-          <button data-mode="turnout" aria-pressed="true">אחוז הצבעה</button>
-          <button data-mode="margin" aria-pressed="false">פער בין הגושים</button>
-        </div>
-      </div>
-
-      <div class="panel">
-        <h2>סינון</h2>
-        <div class="field">
-          <input type="search" id="q" placeholder="חיפוש לפי שם אתר, כתובת או מספר קלפי" aria-label="חיפוש">
-        </div>
-        <div class="field">
-          <label class="lab">טווח אחוז הצבעה: <span class="rangeval" id="turnoutVal">0%–100%</span></label>
-          <div class="dualrange">
-            <input type="range" id="turnoutMin" min="0" max="100" step="1" value="0" aria-label="אחוז הצבעה מינימלי">
-            <input type="range" id="turnoutMax" min="0" max="100" step="1" value="100" aria-label="אחוז הצבעה מקסימלי">
-          </div>
-        </div>
-        <div class="field">
-          <label class="lab">גוש מוביל באתר</label>
-          <div class="chips" id="blocChips"></div>
-        </div>
-      </div>
-
-      <div class="listhead">
-        <span id="count"></span>
-        <select id="sort" aria-label="מיון">
-          <option value="kalpi">לפי מספר קלפי</option>
-          <option value="turnout_desc">אחוז הצבעה — מהגבוה</option>
-          <option value="turnout_asc">אחוז הצבעה — מהנמוך</option>
-          <option value="voters_desc">מספר מצביעים</option>
-          <option value="coal_desc">שיעור קואליציה 2022</option>
-          <option value="opp_desc">שיעור אופוזיציה רחבה</option>
-        </select>
-      </div>
-      <div class="scroll" id="list"></div>
-
-      <div class="detail hidden" id="detail"></div>
-    </aside>
   </div>
 
   <div class="modal hidden" id="about" role="dialog" aria-modal="true" aria-label="על הנתונים">

@@ -23,6 +23,16 @@ OUT_HTML      = 'haifa_polling_map.html'               # generated single-file m
 # Constrains Nominatim, rejects stray geocodes, and scopes the Overpass query.
 BBOX = (34.90, 32.74, 35.12, 32.87)
 
+# ------------------------------------------------- national turnout (baseline)
+# The map's turnout-delta mode measures every site against the NATIONAL turnout of
+# the same election, not against the city's own average: measured against the city
+# mean half the sites sit above it by construction and nothing reads as low, which
+# hides the thing the map exists to show. build_data.py recomputes this from
+# data/expb.csv when that file is present; this value is the documented fallback.
+NATIONAL_TURNOUT = 70.63   # Knesset 25, all localities in expb.csv (4,794,593 / 6,788,804)
+
+# The city average stays available as a secondary reference in the UI.
+
 # ------------------------------------------------------------------- map view
 # Fallback map center [lat, lon] and zoom. Leave MAP_CENTER = None to let
 # build_data.py use the mean of all geocoded sites.

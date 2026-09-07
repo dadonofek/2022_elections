@@ -33,6 +33,15 @@
   --pot-coal-0:#fe9671; --pot-coal-1:#f5713e; --pot-coal-2:#db5923; --pot-coal-3:#bf4301; --pot-coal-4:#9c3604;
   --pot-opp-0:#7db5ff; --pot-opp-1:#509cfd; --pot-opp-2:#3784e4; --pot-opp-3:#1d6dca; --pot-opp-4:#0557ac;
   --pot-oth-0:#42c891; --pot-oth-1:#1caf7a; --pot-oth-2:#149567; --pot-oth-3:#0c7c55; --pot-oth-4:#056443;
+  /* הדמוקרטים: a camp INSIDE the opposition bloc, so it cannot borrow a bloc hue.
+     Teal, OKLCH hue 210 — the free hue that keeps CVD dE >= 10 from all three bloc
+     colours (16 / 13 / 10 against the blue, the orange and the green at the deep end,
+     whichever bloc currently wears which); rose is taken by the delta ramp and purple
+     by turnout. Validated as an ordinal ramp: monotone L, adjacent dL >= 0.06, light
+     end 2.19:1 on the light surface. Not redefined for dark mode either — its dark end
+     clears 2.57:1 there, the widest margin of any ramp here. */
+  --camp-dem:#006572;
+  --pot-dem-0:#00bed5; --pot-dem-1:#00a7bc; --pot-dem-2:#0090a2; --pot-dem-3:#007a8a; --pot-dem-4:#006572;
   --shadow:0 1px 2px rgba(0,0,0,.06),0 6px 20px rgba(0,0,0,.08);
   --radius:10px;
   --sidebar-w:380px;
@@ -51,6 +60,7 @@
     --div-mid:#383835;
     --div-coal-1:#8a4423; --div-coal-2:#d95926; --div-coal-3:#f0a077;
     --dlt-none:#5b5b54;
+    --camp-dem:#00707e;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.5);
   }
 }
@@ -67,6 +77,7 @@
   --div-mid:#383835;
   --div-coal-1:#8a4423; --div-coal-2:#d95926; --div-coal-3:#f0a077;
   --dlt-none:#5b5b54;
+  --camp-dem:#00707e;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.5);
 }
 
@@ -431,6 +442,15 @@ table.full tbody tr:hover{background:var(--surface-2)}
       <details class="filters" id="filters" open>
         <summary>סינון וצביעה <span class="sum" id="filtSummary"></span></summary>
         <div class="panel">
+          <h2>המחנה שלי</h2>
+          <div class="field" id="campField">
+            <label class="lab" for="camp">עבור מי המפה סופרת</label>
+            <select id="camp"></select>
+            <p class="legend-note" id="campNote" style="margin:4px 0 0"></p>
+          </div>
+        </div>
+
+        <div class="panel">
           <h2>צביעת הסמנים</h2>
           <div class="seg grid3" id="modeSeg" role="group" aria-label="בחירת צביעה">
             <button data-mode="potential" aria-pressed="true">פוטנציאל</button>
@@ -440,11 +460,11 @@ table.full tbody tr:hover{background:var(--surface-2)}
             <button data-mode="margin" aria-pressed="false">פער בין הגושים</button>
           </div>
           <div class="field" id="potTargetField" style="margin-top:10px">
-            <label class="lab" for="potTarget">הגוש שלי — למי שייכים הקולות שלא הגיעו</label>
+            <label class="lab" for="potTarget">למי לשייך את הקולות שלא הגיעו</label>
             <select id="potTarget">
               <option value="none">כל מי שלא הצביע (ללא שיוך)</option>
+              <option value="camp">המחנה שלי</option>
               <option value="coalition">קואליציית 2022</option>
-              <option value="opposition">אופוזיציה רחבה</option>
               <option value="other">רשימות אחרות</option>
             </select>
           </div>
@@ -478,7 +498,7 @@ table.full tbody tr:hover{background:var(--surface-2)}
           <option value="turnout_desc">אחוז הצבעה — מהגבוה</option>
           <option value="voters_desc">מספר מצביעים</option>
           <option value="coal_desc">שיעור קואליציה 2022</option>
-          <option value="opp_desc">שיעור אופוזיציה רחבה</option>
+          <option value="camp_desc">שיעור המחנה שלי</option>
           <option value="kalpi">לפי מספר קלפי</option>
         </select>
       </div>
@@ -497,10 +517,10 @@ table.full tbody tr:hover{background:var(--surface-2)}
           <option value="lead">צביעה: גוש מוביל</option>
           <option value="margin">צביעה: פער בין הגושים</option>
         </select>
-        <select id="mapPotTarget" class="mapctl" aria-label="הגוש שלי">
+        <select id="mapPotTarget" class="mapctl" aria-label="למי שייכים הקולות שלא הגיעו">
           <option value="none">כל מי שלא הצביע</option>
+          <option value="camp">המחנה שלי</option>
           <option value="coalition">קואליציית 2022</option>
-          <option value="opposition">אופוזיציה רחבה</option>
           <option value="other">רשימות אחרות</option>
         </select>
         <button class="btn" id="btnReset">מבט על כל העיר</button>

@@ -2,7 +2,14 @@
 import json, re, unicodedata, config
 
 BLOCS = config.BLOCS
+CAMPS = config.CAMPS
 PARTY_NAMES = config.PARTY_NAMES
+
+# camps that are a party group of their own (not just an alias for a bloc total)
+OWN_CAMPS = [k for k, v in CAMPS.items() if v.get('parties')]
+# every key the potential is computed for: the three blocs of the partition, plus
+# each camp that is narrower than a bloc (הדמוקרטים sits inside the opposition)
+POT_KEYS = ('coalition', 'opposition', 'other', *OWN_CAMPS)
 
 raw = json.load(open('data/raw.json'))
 geo = json.load(open('data/geocache.json'))
@@ -21,6 +28,10 @@ def precision(g):
 def bloc_totals(parties):
     t = {k: sum(parties.get(p, 0) for p in ps) for k, ps in BLOCS.items()}
     t['opposition'] = t['zionist_opp'] + t['arab']
+    # camps with their own party list are counted here too; they overlap a bloc by
+    # design (dem ⊂ opposition) and so are never subtracted from anything.
+    for k in OWN_CAMPS:
+        t[k] = sum(parties.get(p, 0) for p in CAMPS[k]['parties'])
     return t
 
 def potential(o):
@@ -34,8 +45,8 @@ def potential(o):
     """
     nv, valid = o['non_voters'], o['valid']
     if not valid:
-        return {k: 0 for k in ('coalition', 'opposition', 'other')}
-    return {k: round(nv * o[k] / valid) for k in ('coalition', 'opposition', 'other')}
+        return {k: 0 for k in POT_KEYS}
+    return {k: round(nv * o[k] / valid) for k in POT_KEYS}
 
 
 # --- station level -------------------------------------------------------
@@ -77,6 +88,7 @@ for s in stations:
         'voters': s['voters'], 'turnout': s['turnout'], 'valid': s['valid'],
         'invalid': s['invalid'], 'non_voters': s['non_voters'], 'coalition': s['coalition'],
         'opposition': s['opposition'], 'other': s['other'], 'lead': s['lead'],
+        **{k: s[k] for k in OWN_CAMPS},
         'parties': s['parties'],
     })
 
@@ -162,7 +174,8 @@ def national_turnout():
 
 city['national_turnout'], _nt_src = national_turnout()
 
-payload = {'city': city, 'sites': out_sites, 'party_names': PARTY_NAMES, 'blocs': BLOCS}
+payload = {'city': city, 'sites': out_sites, 'party_names': PARTY_NAMES, 'blocs': BLOCS,
+           'camps': CAMPS, 'default_camp': config.DEFAULT_CAMP}
 json.dump(payload, open('data/map_data.json', 'w'), ensure_ascii=False, separators=(',', ':'))
 
 print('sites:', len(out_sites), '| kalpiot:', len(stations))
@@ -173,5 +186,9 @@ print('precision:', Counter(s['geo_precision'] for s in out_sites))
 print('co-located sites spread apart:', spread)
 print('national turnout %:', city['national_turnout'], 'from', _nt_src)
 print('city non-voters:', city['non_voters'], '| potential', city['pot'])
+for k in OWN_CAMPS:
+    print(f'camp {k} ({CAMPS[k]["name"]}):', city[k], 'votes |',
+          round(100 * city[k] / city['valid'], 2), '% | potential', city['pot'][k],
+          '| site max potential', max(s['pot'][k] for s in out_sites))
 print('city turnout %:', city['turnout'], '| coalition', cb['coalition'], 'opp', cb['opposition'], 'other', city['other'])
 print('json size KB:', round(len(open('data/map_data.json').read().encode())/1024))

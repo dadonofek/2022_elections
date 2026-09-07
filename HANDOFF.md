@@ -41,6 +41,15 @@ Address→site match confidence, carried over from the spreadsheet: 133 גבוה
 
 ## What the map does
 
+* **A camp**: `המחנה שלי` picks between **הדמוקרטים** (העבודה + מרצ — the default) and
+  **אופוזיציה רחבה**, and everything directional points at it — the potential (colour,
+  bins, legend), the list's headline figure, the `שיעור המחנה שלי` sort, the first header
+  tile and the table's camp columns. It is **not** a fourth bloc: הדמוקרטים sits inside the
+  broad opposition, so the partition-based views (bloc split, `גוש מוביל`,
+  `פער בין הגושים`, the filter chips) keep using the three blocs and the camp is shown
+  beside them, labelled as a subset. Defined in `config.CAMPS` / `config.DEFAULT_CAMP`;
+  the select is built from the data, so a new camp is a config edit. See
+  `PRODUCT_DECISIONS.md` Round 5 before changing any of it.
 * One marker per site; marker **area** ∝ **בעלי זכות בחירה** (the electorate the site
   serves) in *every* mode — the mode changes the colour and nothing else, so a marker
   keeps its size as you switch and "big and dark" always reads as one sentence.
@@ -63,9 +72,19 @@ Address→site match confidence, carried over from the spreadsheet: 133 גבוה
 * Site labels with collision avoidance, dark mode, and an "על הנתונים" panel documenting
   sources, bloc definitions and limitations.
 
-Bloc definitions (in `build_data.py`, mirrored in the about panel):
+Bloc definitions (in `config.BLOCS`, applied by `build_data.py`, mirrored in the about panel):
 coalition = מחל, שס, ג, ט · zionist opposition = פה, כן, ל, אמת, מרצ · arab = ום, עם, ד ·
 broad opposition = zionist opposition + arab · other = valid − coalition − opposition.
+
+Camp definitions (`config.CAMPS`): הדמוקרטים = אמת + מרצ (13,071 votes in Haifa, 9.35% of
+the valid vote, potential 10,142 — the sum of the 140 sites, which is what the UI prints;
+`city.pot` applies one city-wide share to all non-voters and says 10,534) ·
+אופוזיציה רחבה = the broad-opposition bloc total. A camp
+overlaps a bloc on purpose and is never subtracted from one. **הדמוקרטים did not exist in
+2022** — העבודה and מרצ ran separately and מרצ missed the threshold; the party was formed
+from their merger in 2024, so the sum is retrospective. That caveat is in `config.CAMPS`
+(`note`) and surfaces under the camp select, in the site card and
+in `על הנתונים`.
 
 ## Pipeline
 
@@ -93,13 +112,14 @@ overwritten.**
 
 ## Tests
 
-`python3 test_map.py` (all) or `python3 test_map.py dark` (one). 32 scenarios: light, dark,
-each color mode, each potential target, detail, labels, table, sorting, filter, search,
-narrow viewport, and twelve phone scenarios at 390x844 with touch. Checks JS errors,
+`python3 test_map.py` (all) or `python3 test_map.py dark` (one). 36 scenarios: light, dark,
+each color mode, each potential target, both camps, detail, labels, table, sorting, filter,
+search, narrow viewport, and thirteen phone scenarios at 390x844 with touch. Checks JS errors,
 failed requests, horizontal overflow, clipped controls, markers and tiles rendering,
 overlays escaping their container, the table view covering the map, the two colour-mode
-controls staying in step, and the marker radius not moving when the mode changes.
-Screenshots → `build/`. All 32 pass as of handoff.
+controls staying in step, the marker radius not moving when the mode changes, and the camp
+reaching every surface it drives (legend, header tile, list figure, target and sort option
+labels, table column set). Screenshots → `build/`. All 36 pass as of handoff.
 
 Set `PLAYWRIGHT_CHROMIUM_PATH` when the container ships its own Chromium (e.g.
 `PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium python3 test_map.py`); without the
@@ -190,7 +210,10 @@ contrast >= 2:1, single hue) in both modes. It is **sequential, not diverging**,
 against the national baseline 123 of the 140 sites are below it — a symmetric scale would
 spend half its range on 17 sites. The **potential ramps are sequential ramps on the
 existing bloc hues**, so hue keeps meaning "which bloc" and lightness carries the
-magnitude; all six were validated the same way. **They are not redefined for dark mode**,
+magnitude; all six were validated the same way. The **camp ramp (teal, OKLCH hue 210)** is
+the exception to "hue means which bloc": הדמוקרטים sits inside a bloc, so it needs a hue no
+bloc owns — worst CVD dE 15.9 / 12.6 / 10.0 against the blue, the orange and the green
+(measured by hue, so the bloc swap did not touch it). **They are not redefined for dark mode**,
 and neither is the rose ramp: the legend tells the reader "big and dark = a lot still on
 the table", so darker has to keep meaning *more* in both themes. Every dark end still
 clears 2.5:1 against the dark surface. The turnout ramp still inverts in dark mode, so its
@@ -212,8 +235,16 @@ deliberately: changing it alters the appearance of the most-used mode.
 * One address arrives mangled from the source PDF (`פרץ י .ל20,.`); it is displayed as
   `י.ל. פרץ 20` via `ADDRESS_FIX` in `src_app.js`. Its coordinates were verified correct.
 * Sites that geocoded to an identical point are nudged a few metres apart (`jittered`).
+* The camp's potential is the estimate of §1 in `PRODUCT_DECISIONS.md` narrowed to two
+  lists, so every caveat on it holds and the retrospective merger is one more: it assumes
+  non-voters lean like their voting neighbours AND that a 2024 party inherits the 2022
+  votes of both its predecessors.
 
 ## Possible next steps (none required)
+
+* Another camp is a `config.CAMPS` entry plus a `--camp-<key>` colour, a
+  `--pot-<key>-0..4` ramp and its bin edges — see `PRODUCT_DECISIONS.md` §5.4 for how the
+  existing ramp was measured. Do not eyeball a new one.
 
 * Raise location precision for the 80 street-centroid sites via govmap or manual review.
 * Shareable link: publishing as an Artifact is blocked because its CSP blocks OSM tiles —

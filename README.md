@@ -19,11 +19,23 @@ need an internet connection.
   marker in turnout mode is a big electorate that largely stayed home. The area means
   that in **every** mode — only the marker **color** follows the selected mode, so
   switching modes never resizes the map.
+* **A camp — the map counts for someone.** `המחנה שלי` picks between
+  **הדמוקרטים** (העבודה + מרצ, the default) and **אופוזיציה רחבה**, and everything
+  directional follows it: the potential and its colour ramp, the list's headline figure,
+  the `שיעור המחנה שלי` sort, the first header tile and the table's camp columns. It is
+  **not** a fourth bloc — הדמוקרטים sits *inside* the broad opposition, so the bloc split,
+  *גוש מוביל*, *פער בין הגושים* and the filter chips keep partitioning the vote three ways
+  and the camp is shown beside them, labelled as the subset it is. It also gets a hue of its
+  own — **teal** — because a camp painted in its parent bloc's colour would say "opposition"
+  while the legend said "הדמוקרטים". הדמוקרטים did not exist
+  in 2022 (העבודה and מרצ ran separately, and מרצ missed the threshold): the sum is a
+  retrospective construct, and the UI says so wherever it appears.
 * **Five color modes** (*פוטנציאל* is the default)
   * *פוטנציאל* — how many votes are sitting at this site and did not turn up:
-    `eligible x (1 - turnout) x the bloc's share of the votes cast here`. A
-    `הגוש שלי` selector picks whose votes to count; unset, it shows raw non-voters.
-    Hue says *which* bloc and lightness says *how many*, while the marker area keeps
+    `eligible x (1 - turnout) x the group's share of the votes cast here`. A second
+    selector picks whose votes to count — `המחנה שלי` (the default), the 2022 coalition,
+    the other lists, or nobody, which shows raw non-voters.
+    Hue says *which* group and lightness says *how many*, while the marker area keeps
     carrying the electorate — so a large dark marker is a big electorate with a lot of
     it still on the table, and a small dark one is a small electorate that barely voted.
     **It is an estimate, not a forecast** — see the caveats in *על הנתונים*.
@@ -50,7 +62,7 @@ need an internet connection.
   that card's *כל הנתונים באתר* button, so identifying a circle never costs you the map.
   On a pointer device the marker keeps its hover tooltip and a click fills the panel
   beside the map. The **color mode** also gets its own select on the map bar in this
-  layout (with the `הגוש שלי` select beside it in potential mode), bound to the same
+  layout (with the potential-target select beside it in potential mode), bound to the same
   state as the filter panel's segmented control — that panel is on the other tab, so
   picking a mode there meant three taps and no view of the map being painted.
 * **Site detail** (click a marker or a list row): bloc split, largest parties, a
@@ -136,9 +148,16 @@ hold none of their own. To build the map for another city in the **same election
    then `./build.sh`. Expect a ~15-minute cold geocode.
 5. `python3 test_map.py` to sanity-check the render.
 
-For a **different election**, also update `BLOCS` and `PARTY_NAMES` in `config.py` with that
-election's party letter codes. The Hebrew UI strings in `src_map.html` / `src_app.js` are
-generic ("polling site", "turnout", …) and need no change; only the `<title>` and the
+For a **different election**, also update `BLOCS`, `CAMPS` and `PARTY_NAMES` in `config.py`
+with that election's party letter codes. `CAMPS` is what the `המחנה שלי` selector offers:
+each entry names a camp and the letter codes to sum for it (a camp with no `parties` reuses
+the bloc total of the same key, which is how `אופוזיציה רחבה` is defined), and
+`DEFAULT_CAMP` is the one the map opens on. Adding or swapping a camp is a config edit —
+the front end builds the selector from the data. A camp with its own party list also needs
+a `--camp-<key>` colour and a `--pot-<key>-0..4` ramp in `src_map.html` plus its bin edges
+in `POT_BINS`; validate any new ramp as described in `PRODUCT_DECISIONS.md` §5.4.
+
+The Hebrew UI strings in `src_map.html` / `src_app.js` are generic ("polling site", "turnout", …) and need no change; only the `<title>` and the
 "על הנתונים" panel text mention specifics worth reviewing.
 
 ## Tests
@@ -149,16 +168,18 @@ python3 test_map.py                      # all scenarios
 python3 test_map.py dark                 # one scenario
 ```
 
-Thirty-two scenarios — light, dark, each of the five color modes, each potential
-target, detail, labels, table, sorting, filter, search, marker interaction on both
-touch and pointer layouts, and **twelve phone scenarios at 390x844 with touch** — are
+Thirty-six scenarios — light, dark, each of the five color modes, each potential
+target, **both camps**, detail, labels, table, sorting, filter, search, marker interaction
+on both touch and pointer layouts, and **thirteen phone scenarios at 390x844 with touch** — are
 rendered headlessly and checked for JS errors, failed
 requests, horizontal overflow, clipped controls, markers and tiles rendering, overlays
 escaping their container, the table view covering the map, the sidebar sitting to the
 right of the map under RTL, legend ramp labels running in the same direction as
 their swatches, a marker tap on a phone opening its card without leaving the map, the
 map-bar mode control staying in step with the panel's, and the marker radius not moving
-when the color mode changes.
+when the color mode changes. Switching the camp is checked across every surface it claims
+to drive — legend, header tile, list figure, the target and sort option labels, and the
+table's column set.
 Screenshots land in `build/`.
 
 The phone scenarios assert controls are **reachable** — on screen, with real size — not

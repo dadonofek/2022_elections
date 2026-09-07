@@ -34,9 +34,10 @@ need an internet connection.
     The baseline is national, not the city's own mean, because against the city mean
     half the sites sit above it by construction and nothing reads as low. The gap
     from the city average is shown too, per site and in the table.
-  * *גוש מוביל* — which bloc led at the site (categorical: blue / orange / green).
-  * *פער בין הגושים* — coalition-minus-opposition margin, a diverging blue<->orange
-    scale with a neutral gray midpoint.
+  * *גוש מוביל* — which bloc led at the site (categorical: the broad opposition is
+    **blue**, the 2022 coalition **orange**, other lists **green**).
+  * *פער בין הגושים* — coalition-minus-opposition margin, a diverging orange<->blue
+    scale with a neutral gray midpoint, reusing the two bloc hues.
 * **Filters** by free text (site name, address, station number or "iron" number),
   a turnout **range** (min *and* max sliders), and leading bloc. The list, the
   markers, the legend counts and the table all follow the active filter. The list

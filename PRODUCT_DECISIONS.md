@@ -40,8 +40,9 @@ the size of the actual electorate. That number is now the first header tile.
   potential ramp is a sequential ramp built on the *existing* bloc hue: pick coalition
   and you get a blue ramp, opposition an orange one. Consistent with everything else on
   the map, and no new semantics to learn.
-- **Marker area follows the potential in this mode**, not the electorate — otherwise the
-  headline number is not the thing the eye is measuring.
+- ~~**Marker area follows the potential in this mode**, not the electorate — otherwise the
+  headline number is not the thing the eye is measuring.~~ **Superseded in Round 3:** it
+  put both channels on the same variable and cost the map its second one. See Round 3.
 - **Fixed bins, never quantiles of the filtered set.** A colour must not change meaning
   when the user filters. `רשימות אחרות` gets its own scale (site max 97, vs 1,532).
 - **It is labelled an estimate, and the caveat is in `על הנתונים`.** Two reasons it is an
@@ -259,3 +260,67 @@ The **existing turnout ramp** fails the same light-end contrast check the new ra
 that is not the shipped value. Left alone deliberately: fixing it changes the appearance
 of the map's most-used mode, which is not what this round was asked for. Worth a decision
 next round.
+
+---
+
+# Round 3 — the mode control, and what the marker size is for
+
+Two things, both about the map saying more per glance.
+
+## 3.1 The colour mode was three taps away, on the wrong screen
+
+**Reported:** on a phone, changing what the map is coloured by costs
+`רשימה` → expand `סינון וצביעה` → pick the mode → back to `מפה`.
+
+**Decided: put the control on the map, in that layout only.** A compact
+`<select>` sits in `.mapbar` beside `מבט על כל העיר`, with the bloc-target select
+next to it whenever the mode is `potential`. Both are `display:none` above 1000px,
+where the filter panel is already beside the map and a second copy would just be
+noise.
+
+**Why a select and not the segmented control.** Five modes as a segment needs ~280px
+and two rows; a select is one tap to open, shows the current mode as its own label,
+and leaves room on the bar for the two buttons that were already there. The bar wraps
+below the zoom control's reserved 52px, so nothing is ever pushed off the map.
+
+**The state, not a second state.** Both copies go through `setMode()` / `setPotTarget()`,
+which write the state and then sync *every* control, so the panel's segment and the
+map's select cannot drift apart. That is the whole point: the same control in two
+places, not two controls.
+
+**Regression checks:** `phone_mapmode` asserts that changing the mode from the map bar
+leaves `view == 'map'` and moves the panel's segment too; `phone_mapmode_sync` asserts
+the reverse direction; the desktop `light` scenario asserts `mapModeUsable: False`, so
+the duplicate never appears where it is not wanted.
+
+## 3.2 Potential mode was spending two channels on one variable
+
+**Reported:** in potential mode the size should go back to `בעלי זכות בחירה` and let the
+colour carry the potential.
+
+**Decided: yes — size is the electorate in every mode now.** Round 1 sized potential mode
+by the potential so "the headline number is the thing the eye measures". In practice the
+two encodings were the same number twice over: potential is
+`eligible × (1 − turnout) × bloc share`, so a big marker was dark *because* it was big,
+and the map carried one variable where it has room for two.
+
+With area on the electorate and colour on the potential, all four combinations mean
+something again:
+
+| | pale | dark |
+|---|---|---|
+| **large** | a big electorate that mostly turned out | a big electorate with a lot still on the table — the target |
+| **small** | a small site, little to gain | a small electorate that barely voted — invisible under the old scheme |
+
+Two things fall out of it. Marker size is now **stable across modes**: switching the
+colour no longer resizes the map, so the modes are comparable and the eye keeps its
+anchor. And the `על הנתונים` panel's claim that *"the marker's **area** is proportional
+to the number of **בעלי זכות בחירה**"* — written in round 1 and quietly false in the
+default mode ever since — is true again.
+
+The per-target radius normalisation (`sizeK`, `_kCache`, `POT_SIZES`) went with it: one
+scale, one size legend, `700 / 1,600 / 3,500` בעלי זכות in every mode.
+
+**Regression check:** `radiusModeIndependent` evaluates `radiusOf()` for the same site
+under all five modes and asserts the radius does not move — run on every scenario, not
+just the potential ones.

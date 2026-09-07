@@ -2,7 +2,7 @@
 flip surname-first street names, try spelling variants, then street-only."""
 import json, re, time, urllib.parse, urllib.request, config
 
-CACHE = 'data/geocache.json'
+CACHE = config.data('geocache.json')
 cache = json.load(open(CACHE))
 UA = config.UA
 BBOX = config.BBOX

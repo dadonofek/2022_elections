@@ -1,16 +1,70 @@
-# Handoff — Haifa polling-station map
+# Handoff — polling-station maps, Knesset 25
 
-Working dir: `/Users/home/Projects/elections/Haifa` (not a git repo).
-Deliverable: **`haifa_polling_map.html`** — one self-contained file (~508 KB), opens in any
-browser, no server and no API key. Data and Leaflet are inlined; only the OpenStreetMap
-background tiles need network. **UI language is Hebrew (RTL) and must stay Hebrew.**
+Deliverable: one self-contained HTML file per city (~560 KB), opens in any browser, no
+server and no API key. Data and Leaflet are inlined; only the OpenStreetMap background
+tiles need network. **UI language is Hebrew (RTL) and must stay Hebrew.**
+
+| city | slug | built |
+|---|---|---|
+| חיפה | `haifa` (default) | `haifa_polling_map.html` — 424 stations, 140 sites, 55.53% turnout |
+| בית שמש | `beit_shemesh` | **not yet** — data ready, geocoding outstanding (see below) |
+
+Pick the city with the `CITY` environment variable: `CITY=beit_shemesh ./build.sh`.
 
 The generated file is a full HTML document (`<!DOCTYPE html>` + `<head><meta charset="utf-8">`).
 If you ever see the Hebrew render as mojibake, the charset meta or the UTF-8 write encoding
 in `build_map.py` was dropped — both are required for `file://` viewing.
 
 All city/election constants are in **`config.py`**; the pipeline scripts have none of their
-own. See "Adapting to another city" in `README.md`.
+own. See "Adding a city" in `README.md`.
+
+## Beit Shemesh — what is done and what is left
+
+**Done.** `data/beit_shemesh/raw.json` holds all 133 stations and all 44 sites, with site
+names and addresses, built by `CITY=beit_shemesh python3 extract.py` from the two official
+national files. Totals: **78,064 eligible · 51,622 voters · 66.13% turnout**. Every station
+has an address; the two files agree on all 44 site groupings. `config.CITIES['beit_shemesh']`
+carries the locality code (2610), the bounding box, the zoom and the two provenance
+sentences the *על הנתונים* panel prints.
+
+**Left.** Coordinates. Stage 2 (`geocode.py`) needs `nominatim.openstreetmap.org` and
+stage 5 (`snap_osm.py`) needs `overpass-api.de`; the machine this was prepared on had
+neither — its egress policy allows only GitHub and the package registries. Nothing about
+the city is special: run
+
+```sh
+CITY=beit_shemesh ./build.sh          # ~44 addresses, a few minutes at 1 req/s
+CITY=beit_shemesh python3 test_map.py
+```
+
+anywhere with ordinary internet access and it finishes, then add the new file to
+`index.html`. `build_data.py` **refuses** to emit a map while any site lacks coordinates
+(override with `ALLOW_MISSING_COORDS=1`), so a half-geocoded run cannot ship quietly.
+
+Do **not** substitute the Google-geocoded `output/locations.tsv` from
+JacobWeinbren/Israel-Revised: it covers only 13 of the 44 addresses exactly and 9 more at
+street level, because it was built from elections 14–24 and Ramat Beit Shemesh grew after
+them. Half a map is worse than none.
+
+## Multi-city: what changed
+
+* `config.py` holds a `CITIES` registry; `CITY` (env) selects one, defaulting to `haifa`.
+  Everything a city owns — name, locality code, bbox, center, zoom, output filename,
+  extract mode, provenance sentences — lives in its entry.
+* Each city caches under `data/<slug>/` (`raw.json`, `geocache.json`, `osm_venues.json`,
+  `osm_snaps.json`, `map_data.json`). Haifa's files moved there. `data/expb.csv` and
+  `data/kalpiplaces_25.xlsx` stay at the top of `data/` — they are national.
+* `extract.py` has two modes. `cec` builds stations and sites straight from the two
+  national files and works for **any** locality with no preparation; `workbook` is the old
+  hand-built spreadsheet path, which Haifa stays on for its per-site match confidence.
+  The two were compared on Haifa and agree — see README, *Provenance*.
+* The front end no longer names a city. `src_map.html` carries `__CITY_HE__` /
+  `__N_KALPI__` / `__N_SITES__` tokens that `build_map.py` substitutes, and every Hebrew
+  sentence in `src_app.js` that mentions the city builds it from `DATA.city.name`
+  (`IN_CITY` = `'ב'+name`, `FROM_CITY` = `'מ'+name`). The address source and the
+  station-to-address caveat come from `DATA.city.source_note` / `match_note`.
+* Rebuilding Haifa after all of this produced a **byte-identical** `map_data.json` and
+  HTML, and all 36 render scenarios still pass.
 
 ## Status: the original goal is complete
 

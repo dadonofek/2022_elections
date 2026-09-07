@@ -1,5 +1,5 @@
 """Join every polling station to geocoded coordinates and aggregate to map sites."""
-import json, re, unicodedata, config
+import json, re, os, unicodedata, config
 
 BLOCS = config.BLOCS
 CAMPS = config.CAMPS
@@ -9,9 +9,21 @@ PARTY_NAMES = config.PARTY_NAMES
 # each camp, which is narrower than a bloc (הדמוקרטים sits inside the opposition)
 POT_KEYS = ('coalition', 'opposition', 'other', *CAMPS)
 
-raw = json.load(open('data/raw.json'))
-geo = json.load(open('data/geocache.json'))
-snaps = json.load(open('data/osm_snaps.json'))   # sites matched to a named OSM venue
+def load(name, default=None):
+    """A city part-way through the pipeline is missing later stages' files; treat
+    them as empty so the no-coordinates check below reports what is actually
+    wrong instead of a traceback."""
+    path = config.data(name)
+    if not os.path.exists(path):
+        if default is None:
+            raise SystemExit(f'{path} is missing — run extract.py for {config.CITY_SLUG} first')
+        print(f'note: {path} is missing, treating it as empty')
+        return default
+    return json.load(open(path))
+
+raw = load('raw.json')
+geo = load('geocache.json', {})
+snaps = load('osm_snaps.json', {})   # sites matched to a named OSM venue
 stations, site_rows = raw['stations'], raw['sites']
 
 def precision(g):
@@ -136,6 +148,10 @@ city = {
     'n_kalpi': len(stations),
     'n_sites': len(out_sites),
     'name': config.CITY_HE,
+    # provenance sentences for the "על הנתונים" panel — per city, since the
+    # address source and how it was matched differ between them
+    'source_note': config.SOURCE_NOTE,
+    'match_note': config.MATCH_NOTE,
     'parties': {},
 }
 _pts = [(s['lat'], s['lon']) for s in out_sites if s['lat'] is not None]
@@ -158,7 +174,7 @@ city['pot'] = potential(city)
 # rather than asserted; fall back to the documented constant otherwise.
 def national_turnout():
     import csv, os
-    path = 'data/expb.csv'
+    path = config.EXPB_CSV
     if not os.path.exists(path):
         return config.NATIONAL_TURNOUT, 'config.NATIONAL_TURNOUT'
     with open(path, encoding='utf-8-sig') as fh:
@@ -174,7 +190,6 @@ city['national_turnout'], _nt_src = national_turnout()
 
 payload = {'city': city, 'sites': out_sites, 'party_names': PARTY_NAMES, 'blocs': BLOCS,
            'camps': CAMPS, 'default_pot_target': config.DEFAULT_POT_TARGET}
-json.dump(payload, open('data/map_data.json', 'w'), ensure_ascii=False, separators=(',', ':'))
 
 print('sites:', len(out_sites), '| kalpiot:', len(stations))
 print('sites without coords:', sum(1 for s in out_sites if s['lat'] is None))
@@ -189,4 +204,18 @@ for k in CAMPS:
           round(100 * city[k] / city['valid'], 2), '% | potential', city['pot'][k],
           '| site max potential', max(s['pot'][k] for s in out_sites))
 print('city turnout %:', city['turnout'], '| coalition', cb['coalition'], 'opp', cb['opposition'], 'other', city['other'])
-print('json size KB:', round(len(open('data/map_data.json').read().encode())/1024))
+# A site with no coordinates has no marker, so a partly-geocoded city renders as a
+# map that quietly omits part of itself. Refuse to WRITE that, so build_map.py cannot
+# pick up a stale half-built file either. ALLOW_MISSING_COORDS=1 builds one anyway.
+_no_coords = [s['name'] for s in out_sites if s['lat'] is None]
+if _no_coords and not os.environ.get('ALLOW_MISSING_COORDS'):
+    raise SystemExit(
+        f'\n{len(_no_coords)} of {len(out_sites)} sites have no coordinates, so they would '
+        f'have no marker:\n  ' + '\n  '.join(_no_coords[:15]) +
+        ('\n  ...' if len(_no_coords) > 15 else '') +
+        f'\nNothing was written. Run geocode.py / geocode_retry.py for {config.CITY_SLUG} '
+        'first, or set ALLOW_MISSING_COORDS=1 to build the map anyway.')
+
+blob = json.dumps(payload, ensure_ascii=False, separators=(',', ':'))
+open(config.data('map_data.json'), 'w', encoding='utf-8').write(blob)
+print('json size KB:', round(len(blob.encode())/1024))

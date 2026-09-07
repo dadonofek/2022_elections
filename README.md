@@ -1,16 +1,34 @@
-# מפת הקלפיות של חיפה — הכנסת ה-25
+# מפת הקלפיות — הכנסת ה-25
 
-A single-file, self-contained HTML map of all **424 polling stations** in Haifa in the
-November 2022 Knesset election, grouped into the **140 polling sites** where they operated,
-with official results, turnout and a full per-party breakdown for every station.
+Single-file, self-contained HTML maps of every polling station in a city in the November
+2022 Knesset election, grouped into the polling sites where they operated, with official
+results, turnout and a full per-party breakdown for every station.
 
-Open **`haifa_polling_map.html`** in any browser — no server, no build step, no API key.
-The file embeds Leaflet and the whole dataset; only the OpenStreetMap background tiles
-need an internet connection.
+Open the map file in any browser — no server, no build step, no API key. The file embeds
+Leaflet and the whole dataset; only the OpenStreetMap background tiles need an internet
+connection.
 
 **Live:** <https://dadonofek.github.io/2022_elections/>
 
 ![the map](screenshot.png)
+
+## Cities
+
+One pipeline, one front end, one city per built file. Cities are entries in
+`config.CITIES`; pick one with the `CITY` environment variable (default `haifa`).
+
+| city | slug | stations | sites | eligible | turnout | map |
+|---|---|---|---|---|---|---|
+| חיפה | `haifa` | 424 | 140 | 253,292 | 55.53% | `haifa_polling_map.html` ✅ built |
+| בית שמש | `beit_shemesh` | 133 | 44 | 78,064 | 66.13% | `beit_shemesh_polling_map.html` — **not built yet** |
+
+Beit Shemesh has its stations, sites, names and addresses (`data/beit_shemesh/raw.json`,
+straight from the two official files — see Provenance). What it does not have is
+coordinates: stage 2 needs `nominatim.openstreetmap.org` and stage 5 needs
+`overpass-api.de`, and neither was reachable from the machine the data was prepared on.
+Run `CITY=beit_shemesh ./build.sh` anywhere with plain internet access and it completes —
+44 addresses, a few minutes at Nominatim's 1 req/s. Stage 6 refuses to emit a map while
+any site is missing coordinates, so a half-geocoded run cannot ship by accident.
 
 ## What the map shows
 
@@ -78,17 +96,18 @@ Product requirements, the decisions taken on them and what was deliberately defe
 are recorded in **`PRODUCT_DECISIONS.md`** — read it before changing the metrics, the
 palette or the mobile layout.
 
-## Data and provenance
+## Data layers, and the Haifa numbers
 
 | Layer | Source |
 |---|---|
 | Votes, eligible voters, voters, valid/invalid per station | Central Elections Committee official per-station file (`expb.csv`, Knesset 25) |
-| Station → address | `haifa_polling_station_matching.xlsx` (built from Haifa's official election notice and the station-site names) |
+| Station → site and address | Haifa: `haifa_polling_station_matching.xlsx` (built from Haifa's official election notice). Every other city: the committee's own station-place file — see Provenance |
 | Address → coordinates | OpenStreetMap Nominatim |
 | Site → building | OpenStreetMap Overpass, for sites whose venue name matched a named school / community centre / hall nearby |
 
-All 424 rows in the spreadsheet were re-verified against `expb.csv`: station counts,
-eligible voters and voters match exactly. City totals: 253,292 eligible, 140,650 voters,
+Where the files come from and how they were cross-checked is in **Provenance** below.
+All 424 rows of Haifa's spreadsheet were re-verified against `expb.csv`: station counts,
+eligible voters and voters match exactly. Haifa's totals: 253,292 eligible, 140,650 voters,
 **55.53% turnout**, 139,764 valid votes — and **112,642 non-voters**, a pool 80% the size
 of the electorate that did vote.
 
@@ -96,7 +115,7 @@ The **national** turnout used as the delta baseline (70.63%) is recomputed by
 `build_data.py` from all 12,545 stations in `expb.csv`; `config.NATIONAL_TURNOUT` is the
 fallback when that file is absent.
 
-**Location accuracy** (per site, also shown in the UI): 35 snapped to an identified OSM
+**Location accuracy in Haifa** (per site, also shown in the UI): 35 snapped to an identified OSM
 building, 13 exact house numbers, 80 street-centroid only, 12 approximate. A street-centroid
 marker can sit tens to a few hundred metres from the actual building. Sites that geocoded to
 the identical point are nudged a few metres apart so their markers stay separable.
@@ -108,50 +127,94 @@ not included, so it is not the turnout of all Haifa residents.
 
 ```sh
 pip install -r requirements.txt
-./build.sh
+./build.sh                      # the default city, Haifa
+CITY=beit_shemesh ./build.sh    # any other city in config.CITIES
 ```
 
-`build.sh` runs seven stages in order. Each stage reads files from `data/` and writes one
-file back to `data/`, so stages are independently re-runnable and the network is only
-touched when a cache file is missing. Geocoding results (`data/geocache.json`) and the
-Overpass reply (`data/osm_venues.json`) are committed, so a normal rebuild is **offline and
-takes seconds**. Delete a cache file to force a re-fetch; a cold geocoding run takes
-~15 minutes (Nominatim is rate-limited to 1 req/s).
+`build.sh` runs seven stages in order. Each stage reads files from `data/<city>/` and
+writes one file back there, so stages are independently re-runnable, two cities never
+share a cache, and the network is only touched when a cache file is missing. Geocoding
+results (`data/<city>/geocache.json`) and the Overpass reply (`data/<city>/osm_venues.json`)
+are committed, so a normal rebuild is **offline and takes seconds**. Delete a cache file to
+force a re-fetch; a cold geocoding run costs a few seconds per address (Nominatim is
+rate-limited to 1 req/s) — about 15 minutes for Haifa's 134 addresses.
+
+Two inputs are national and shared by every city: `data/expb.csv` (results per station)
+and `data/kalpiplaces_25.xlsx` (each station's site, place name and address).
 
 | # | Stage | Reads | Writes | Role |
 |---|---|---|---|---|
-| 1 | `extract.py` | `config.MATCHING_XLSX` | `data/raw.json` | flatten the two spreadsheet tabs (`קלפיות`, `אתרים`) into stations + sites |
-| 2 | `geocode.py` | `data/raw.json` | `data/geocache.json` | address → coordinates via Nominatim, constrained to `config.BBOX` |
-| 3 | `geocode_retry.py` | `data/geocache.json` | `data/geocache.json` | second pass for misses: expand abbreviations (שד→שדרות), drop honorifics (ד"ר), flip surname-first names, try spelling variants |
-| 4 | `qa_geo.py` | `data/geocache.json` | — (report only) | assert every hit names `config.CITY_HE` and no two distinct streets share a point |
-| 5 | `snap_osm.py` | `data/raw.json`, `data/osm_venues.json` | `data/osm_snaps.json` | match site names (schools, community centres…) to named OSM buildings in the bbox, accepted only when near the geocoded address |
-| 6 | `build_data.py` | `raw.json` + `geocache.json` + `osm_snaps.json` | `data/map_data.json` | join all three, aggregate stations → sites, compute turnout / blocs / margin / marker data / map center |
-| 7 | `build_map.py` | `src_map.html`, `src_app.js`, `vendor/*`, `data/map_data.json` | `config.OUT_HTML` | inline everything into one self-contained HTML file |
+| 1 | `extract.py` | the national files, or `config.MATCHING_XLSX` | `data/<city>/raw.json` | flatten one locality into stations + sites (see Provenance) |
+| 2 | `geocode.py` | `raw.json` | `geocache.json` | address → coordinates via Nominatim, constrained to `config.BBOX` |
+| 3 | `geocode_retry.py` | `geocache.json` | `geocache.json` | second pass for misses: expand abbreviations (שד→שדרות), drop honorifics (ד"ר), flip surname-first names, try spelling variants |
+| 4 | `qa_geo.py` | `geocache.json` | — (report only) | assert every hit names `config.CITY_HE` and no two distinct streets share a point |
+| 5 | `snap_osm.py` | `raw.json`, `osm_venues.json` | `osm_snaps.json` | match site names (schools, community centres…) to named OSM buildings in the bbox, accepted only when near the geocoded address |
+| 6 | `build_data.py` | `raw.json` + `geocache.json` + `osm_snaps.json` | `map_data.json` | join all three, aggregate stations → sites, compute turnout / blocs / margin / marker data / map center |
+| 7 | `build_map.py` | `src_map.html`, `src_app.js`, `vendor/*`, `map_data.json` | `config.OUT_HTML` | inline everything into one self-contained HTML file |
+
+Stage 6 **refuses to build** when any site is left without coordinates — a site with no
+coordinates has no marker, so a partly-geocoded city would render as a map that quietly
+omits part of itself. Set `ALLOW_MISSING_COORDS=1` to build one deliberately.
 
 `test_map.py` (stage 8, not in `build.sh`) renders `config.OUT_HTML` headlessly — see Tests.
 
 **Front-end:** edit `src_map.html` (markup + styles) or `src_app.js` (behaviour), then
 re-run `python3 build_map.py`. Never edit the generated HTML directly — it is overwritten.
 The map view, turnout ramp bins and marker sizing live in `src_app.js`; the map center /
-zoom come from `data/map_data.json` (set in `config.py`).
+zoom come from `map_data.json` (set in `config.py`). Nothing in the front end names a
+city: the `<title>` and `<h1>` are `__CITY_HE__` tokens substituted by `build_map.py`, and
+every Hebrew sentence that mentions the city builds it from `DATA.city.name`.
 
-## Adapting to another city
+## Provenance
+
+Two official Central Elections Committee files cover the whole country for Knesset 25:
+
+* **`data/expb.csv`** — results, iron number, eligible voters, voters, valid and invalid
+  per polling station, for all 12,545 stations. Its `ריכוז` column is the **site** each
+  station belongs to, which is what groups stations into map markers.
+* **`data/kalpiplaces_25.xlsx`** — the committee's own station → place table: site number
+  (`סמל רכוז`), place name (`מקום קלפי`) and address (`כתובת קלפי`) for all 11,707
+  stations. Republished unaltered in [JacobWeinbren/Israel-Revised](https://github.com/JacobWeinbren/Israel-Revised)
+  (MIT) after the committee took it off its own site.
+
+Together these give any city its stations, its sites and their addresses with no
+per-city preparation — this is what `extract.py`'s `cec` mode reads.
+
+Haifa predates that discovery: it was built from a hand-made matching workbook
+(`haifa_polling_station_matching.xlsx`) assembled from the city's official election
+notice, and stays on it because the workbook also carries a per-site match confidence and
+method that the map displays. The two sources were compared, and they agree:
+
+| | |
+|---|---|
+| Stations present in both | 424 of 424 |
+| Site groupings identical | 140 of 140 |
+| Addresses identical | 421 of 424 |
+
+Of the three differences, two are the one address the source PDF mangled
+(`פרץ י .ל20,.`, which the committee's file spells `פרץ י. ל. 20` — confirming the
+`ADDRESS_FIX` in `src_app.js`), and one is a real disagreement: station 742,
+`גן "כוכבית"`, is `הפלוגות 14` in the workbook and `הקבוצים 63` in the committee's file.
+
+## Adding a city
 
 All city- and election-specific constants live in **`config.py`** — the pipeline scripts
-hold none of their own. To build the map for another city in the **same election**:
+hold none of their own. For another city in the **same election**:
 
-1. Copy the repo to a new folder.
-2. Drop in that city's station↔address matching workbook (same two-tab layout: `קלפיות`
-   with `מספר קלפי / מספר ברזל / שם אתר / כתובת מועמדת / רמת ביטחון / בעלי זכות / מצביעים /
-   פסולים / כשרים / מפלגה …` columns, and `אתרים`).
-3. In `config.py` set `CITY_HE`, `CITY_SLUG`, `MATCHING_XLSX`, `OUT_HTML` and `BBOX`
-   (the city's bounding box, `W, S, E, N`). Optionally pin `MAP_CENTER` / `MAP_ZOOM`.
-4. `rm -f data/geocache.json data/osm_snaps.json data/osm_venues.json` (they are Haifa's),
-   then `./build.sh`. Expect a ~15-minute cold geocode.
-5. `python3 test_map.py` to sanity-check the render.
+1. Add an entry to `config.CITIES`: its Hebrew name, its locality code (`סמל ישוב` in
+   `expb.csv`), a bounding box (`W, S, E, N`), an output filename and a `source_note` /
+   `match_note` for the *על הנתונים* panel. Leave `extract` at `'cec'`. Optionally pin
+   `center` / `zoom`.
+2. `CITY=<slug> ./build.sh`. The cold geocode is the only slow part.
+3. `CITY=<slug> python3 test_map.py` to sanity-check the render, and add the new map to
+   `index.html`.
+
+Nothing else changes: the station list, the site grouping, the place names and the
+addresses all come from the two national files.
 
 For a **different election**, also update `BLOCS`, `CAMPS` and `PARTY_NAMES` in `config.py`
-with that election's party letter codes. `CAMPS` holds the groups that are not
+with that election's party letter codes, and point `EXPB_CSV` / `KALPI_PLACES_XLSX` at that
+election's files. `CAMPS` holds the groups that are not
 blocs: each entry names one, the letter codes to sum for it, the bloc it sits inside and its
 caveat. `DEFAULT_POT_TARGET` is the group the map opens on — a camp, a bloc, or `none`.
 Adding a camp is a config edit: the front end inserts its option, tile, sort, columns and
@@ -159,16 +222,17 @@ bar from the data, and the blocs are untouched. A camp with its own party list a
 a `--camp-<key>` colour and a `--pot-<key>-0..4` ramp in `src_map.html` plus its bin edges
 in `POT_BINS`; validate any new ramp as described in `PRODUCT_DECISIONS.md` §5.4.
 
-The Hebrew UI strings in `src_map.html` / `src_app.js` are generic ("polling site", "turnout", …) and need no change; only the `<title>` and the
-"על הנתונים" panel text mention specifics worth reviewing.
-
 ## Tests
 
 ```sh
-python3 -m playwright install chromium   # once
-python3 test_map.py                      # all scenarios
-python3 test_map.py dark                 # one scenario
+python3 -m playwright install chromium        # once
+python3 test_map.py                           # all scenarios, the default city
+python3 test_map.py dark                      # one scenario
+CITY=beit_shemesh python3 test_map.py         # another city's map
 ```
+
+The suite renders `config.OUT_HTML`, so it follows `CITY` like every other stage, and it
+asserts no fixed site count — it works for any city.
 
 Thirty-six scenarios — light, dark, each of the five color modes, each potential
 target, **both camps**, detail, labels, table, sorting, filter, search, marker interaction

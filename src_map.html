@@ -276,6 +276,9 @@ table.kt tbody tr:hover{background:var(--surface-2)}
   display:flex; gap:6px; align-items:center;
 }
 .mapbar .btn{box-shadow:var(--shadow)}
+/* the colour controls on the map are for the stacked layout only — on a wide screen
+   the filter panel sits beside the map and duplicating them would just be noise */
+.mapbar .mapctl{display:none}
 .legendbox{
   position:absolute; bottom:34px; inset-inline-start:10px; z-index:600;
   background:var(--surface-1); border:1px solid var(--border); border-radius:var(--radius);
@@ -389,6 +392,16 @@ table.full tbody tr:hover{background:var(--surface-2)}
   .filters > summary .sum{margin-inline-start:auto; font-weight:400; color:var(--text-muted)}
   .filters[open]{overflow-y:auto; max-height:60vh}
 
+  /* the colour mode belongs on the map on a phone: the segmented control is on the
+     other tab, so picking a mode meant three taps and no sight of what it painted */
+  /* left:52px keeps the row clear of Leaflet's zoom control, which is pinned to the
+     physical top-left and paints above this bar */
+  .mapbar{left:52px; right:10px; flex-wrap:wrap; justify-content:flex-start}
+  .mapbar .mapctl{
+    display:block; width:auto; flex:1 1 132px; min-width:0; max-width:210px;
+    padding:6px 8px; font-size:12.5px; box-shadow:var(--shadow);
+  }
+
   .legendbox{width:190px; bottom:28px; padding:8px 10px}
   .tv-head{flex-wrap:wrap}
   .modal{padding:10px}
@@ -482,6 +495,19 @@ table.full tbody tr:hover{background:var(--surface-2)}
     <div class="mapwrap">
       <div id="map"></div>
       <div class="mapbar">
+        <select id="mapMode" class="mapctl" aria-label="צביעת הסמנים">
+          <option value="potential">צביעה: פוטנציאל</option>
+          <option value="turnout">צביעה: אחוז הצבעה</option>
+          <option value="delta">צביעה: פער מהארצי</option>
+          <option value="lead">צביעה: גוש מוביל</option>
+          <option value="margin">צביעה: פער בין הגושים</option>
+        </select>
+        <select id="mapPotTarget" class="mapctl" aria-label="הגוש שלי">
+          <option value="none">כל מי שלא הצביע</option>
+          <option value="coalition">קואליציית 2022</option>
+          <option value="opposition">אופוזיציה רחבה</option>
+          <option value="other">רשימות אחרות</option>
+        </select>
         <button class="btn" id="btnReset">מבט על כל העיר</button>
         <button class="btn" id="btnLabels" aria-pressed="false">שמות אתרים</button>
       </div>

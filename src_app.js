@@ -65,10 +65,6 @@ const POT_BINS = {
   none: [400, 800, 1200, 1600], coalition: [100, 250, 450, 700],
   opposition: [100, 250, 450, 700], other: [10, 25, 45, 70],
 };
-const POT_SIZES = {
-  none: [400, 1000, 2000], coalition: [150, 450, 1000],
-  opposition: [150, 450, 1000], other: [15, 40, 80],
-};
 const potValue = s => (state.potTarget === 'none' ? s.non_voters : s.pot[state.potTarget]);
 const potColor = s => {
   const b = POT_BINS[state.potTarget]; const v = potValue(s);
@@ -88,18 +84,13 @@ const colorOf = s => state.mode === 'lead' ? blocColor(s.lead)
 // not fuse into one blob.
 const zoomScale = () => { const z = map.getZoom(); return z <= 12 ? 0.62 : z <= 13 ? 0.78 : z <= 14 ? 0.92 : z <= 16 ? 1 : 1.15; };
 const baseRadius = (v, k = 0.235) => Math.max(3.2, Math.min(14, 1.2 + Math.sqrt(Math.max(0, v)) * k));
-// In potential mode the marker sizes the potential, not the electorate — otherwise
-// the headline number is not the thing the eye is measuring. k is normalised per
-// metric so the biggest marker stays the same size across modes.
-const sizeValue = s => (state.mode === 'potential' ? potValue(s) : s.eligible);
-const _kCache = {};
-function sizeK() {
-  if (state.mode !== 'potential') return 0.235;
-  const key = state.potTarget;
-  if (!(key in _kCache)) _kCache[key] = 12.8 / Math.sqrt(Math.max(...sites.map(potValue), 1));
-  return _kCache[key];
-}
-const radiusOf = s => baseRadius(sizeValue(s), sizeK()) * zoomScale();
+// Size is the electorate in EVERY mode, potential included — the mode changes the
+// colour and nothing else. Sizing potential mode by the potential spent both channels
+// on the same variable: a big marker was dark because it was big, and the map carried
+// one number instead of two. With area on בעלי זכות and colour on the potential,
+// "big and dark" says a large electorate with a lot of it still on the table, and
+// "small and dark" — a modest electorate that barely voted — becomes visible too.
+const radiusOf = s => baseRadius(s.eligible) * zoomScale();
 
 const partyName = k => DATA.party_names[k] || k;
 // one address arrives mangled from the official PDF; everything else is used verbatim
@@ -334,7 +325,8 @@ function renderLegend() {
     el.innerHTML = `<h3>${POT_LABEL[state.potTarget]}</h3>
       <div class="ramp">${vars.map(v => `<span style="background:${cssVar(v)}"></span>`).join('')}</div>
       <div class="ramp-labels"><span>עד ${num(b[0])}</span><span>${num(b[1])}</span><span>${num(b[b.length - 1])}+</span></div>
-      <p class="legend-note">סה״כ ${num(total)} קולות ב-${vis.length} האתרים שבתצוגה.
+      <p class="legend-note">סמן גדול וכהה = ציבור בוחרים גדול שהרבה ממנו לא הגיע לקלפי
+         (שטח = בעלי זכות, צבע = הפוטנציאל). סה״כ ${num(total)} קולות ב-${vis.length} האתרים שבתצוגה.
          ${state.potTarget === 'none' ? 'מספר בעלי זכות הבחירה שלא הצביעו.'
            : 'הערכה: בעלי זכות שלא הצביעו × שיעור הגוש בקולות שכן נספרו באתר.'}</p>` + sizeLegend();
   } else {
@@ -344,14 +336,10 @@ function renderLegend() {
   }
 }
 function sizeLegend() {
-  const pot = state.mode === 'potential';
-  const ex = pot ? POT_SIZES[state.potTarget] : [700, 1600, 3500];
-  const label = pot ? POT_LABEL[state.potTarget] : 'בעלי זכות בחירה';
-  const k = sizeK();
-  return `<div class="size-legend">${ex.map(v => {
-    const r = baseRadius(v, k);
+  return `<div class="size-legend">${[700, 1600, 3500].map(v => {
+    const r = baseRadius(v);
     return `<div class="b"><i style="width:${2 * r}px;height:${2 * r}px"></i><span>${num(v)}</span></div>`;
-  }).join('')}<div class="b" style="align-self:center"><span>${label}<br>(שטח הסמן)</span></div></div>`;
+  }).join('')}<div class="b" style="align-self:center"><span>בעלי זכות בחירה<br>(שטח הסמן)</span></div></div>`;
 }
 
 // ---------------------------------------------------------------- list
@@ -600,23 +588,39 @@ function renderTable() {
 // ---------------------------------------------------------------- wiring
 function renderAll() { map.closePopup(); renderLegend(); renderList(); restyleMarkers(); syncFilterSummary(); if (!$('#tableview').classList.contains('hidden')) renderTable(); }
 
-$('#modeSeg').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  state.mode = b.dataset.mode;
-  $$('#modeSeg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+// The colour mode has two controls bound to the same state: the segmented control in
+// the filter panel, and a compact pair of selects on the map bar that only the narrow
+// layout shows. Below 1000px the panel lives on the OTHER tab, so choosing a mode cost
+// three taps and you never saw the map you were painting. Every change goes through
+// these setters so the two controls can never disagree.
+function setMode(m) {
+  state.mode = m;
+  $$('#modeSeg button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.mode === m)));
+  $('#mapMode').value = m;
   syncPotField();
   renderAll();
+}
+function setPotTarget(t) {
+  state.potTarget = t;
+  $('#potTarget').value = t;
+  $('#mapPotTarget').value = t;
+  renderAll();
+}
+$('#modeSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  setMode(b.dataset.mode);
 });
+$('#mapMode').addEventListener('change', e => setMode(e.target.value));
 // the bloc target only means anything in potential mode, but it also decides what
-// the list sorts by, so it stays reachable whenever that sort is active
+// the list sorts by, so in the panel it stays reachable whenever that sort is active.
+// On the map bar it follows the mode alone — the sort control is not on that tab.
 function syncPotField() {
   const on = state.mode === 'potential' || state.sort === 'pot_desc';
   $('#potTargetField').classList.toggle('hidden', !on);
+  $('#mapPotTarget').classList.toggle('hidden', state.mode !== 'potential');
 }
-$('#potTarget').addEventListener('change', e => {
-  state.potTarget = e.target.value;
-  renderAll();
-});
+$('#potTarget').addEventListener('change', e => setPotTarget(e.target.value));
+$('#mapPotTarget').addEventListener('change', e => setPotTarget(e.target.value));
 $('#q').addEventListener('input', e => { state.q = e.target.value; renderAll(); });
 function syncTurnoutRange(changed) {
   let lo = +$('#turnoutMin').value, hi = +$('#turnoutMax').value;

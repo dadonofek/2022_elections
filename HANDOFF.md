@@ -41,13 +41,19 @@ Address→site match confidence, carried over from the spreadsheet: 133 גבוה
 
 ## What the map does
 
-* One marker per site; marker **area** ∝ voters at that site.
+* One marker per site; marker **area** ∝ **בעלי זכות בחירה** (the electorate the site
+  serves) in *every* mode — the mode changes the colour and nothing else, so a marker
+  keeps its size as you switch and "big and dark" always reads as one sentence.
 * Five color modes, **potential is the default**: **potential** (votes left on the table,
   sequential on the selected bloc's hue), **turnout** (single-hue sequential ramp),
   **delta vs the national average** (rose deficit ramp), **leading bloc** (categorical),
   **bloc margin** (diverging blue<->orange, gray midpoint). The list defaults to
   potential-descending, and below 1000px the map and list are separate tabs, where a
   marker tap opens a compact card on the map rather than jumping to the site panel.
+  In that layout the map bar also carries its own **colour-mode select** (plus the
+  bloc-target select in potential mode), bound to the same state as the panel's
+  segmented control — the panel lives on the other tab, so choosing a mode there
+  meant three taps and no sight of the map being painted.
 * Filters: free text (site name, address, station number, iron number), minimum turnout,
   leading bloc. Markers, list, legend counts and table all follow the active filter.
 * Click a site → detail panel: bloc split, largest parties, a collapsible per-station
@@ -87,11 +93,17 @@ overwritten.**
 
 ## Tests
 
-`python3 test_map.py` (all) or `python3 test_map.py dark` (one). Ten scenarios: light, dark,
-each color mode, detail, labels, table, filter, search, narrow viewport. Checks JS errors,
+`python3 test_map.py` (all) or `python3 test_map.py dark` (one). 32 scenarios: light, dark,
+each color mode, each potential target, detail, labels, table, sorting, filter, search,
+narrow viewport, and twelve phone scenarios at 390x844 with touch. Checks JS errors,
 failed requests, horizontal overflow, clipped controls, markers and tiles rendering,
-overlays escaping their container, and the table view covering the map. Screenshots →
-`build/`. All ten pass as of handoff.
+overlays escaping their container, the table view covering the map, the two colour-mode
+controls staying in step, and the marker radius not moving when the mode changes.
+Screenshots → `build/`. All 32 pass as of handoff.
+
+Set `PLAYWRIGHT_CHROMIUM_PATH` when the container ships its own Chromium (e.g.
+`PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium python3 test_map.py`); without the
+basemap tiles the suite still runs and marks those rows `*`.
 
 ## Bugs already found and fixed — do not reintroduce
 
@@ -139,6 +151,17 @@ overlays escaping their container, and the table view covering the map. Screensh
    RTL is where title text *begins* — pad the popup title on its inline-START side.
    Check: `cardTitleClearsClose`, which measures the text with a `Range`; the
    `display:block` title box spans the full width and always looks like it overlaps.
+
+14. The colour mode was reachable **only from the list tab** on a phone: `רשימה` →
+    expand `סינון וצביעה` → pick → back to `מפה`. A control that paints the map belongs
+    on the map in that layout. `#mapMode` / `#mapPotTarget` in `.mapbar` are bound to the
+    same state through `setMode()` / `setPotTarget()`, so the two copies cannot disagree;
+    both are `display:none` above 1000px, where the panel is already beside the map.
+    Checks: `phone_mapmode`, `phone_mapmode_sync`, and `mapModeUsable: False` on desktop.
+15. **Potential mode sized the markers by the potential**, which spent both visual
+    channels on one variable — a marker was dark because it was big. Size is the
+    electorate in every mode now; colour alone carries the metric. Check:
+    `radiusModeIndependent`, asserted on every scenario.
 
 ## Product decisions
 

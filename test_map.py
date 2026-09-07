@@ -29,6 +29,8 @@ CHECKS_JS = '''() => {
   r.tiles = document.querySelectorAll('.leaflet-tile-loaded').length;
   r.hOverflow = document.documentElement.scrollWidth - document.documentElement.clientWidth;
   r.mode = document.querySelector('#modeSeg button[aria-pressed="true"]')?.dataset.mode;
+  r.mapMode = q('#mapMode')?.value;          // the map-bar copy must agree with the segment
+  r.mapPotShown = shown(q('#mapPotTarget'));
   r.sort = q('#sort')?.value;
   r.potTarget = q('#potTarget')?.value;
   r.view = document.body.dataset.view;
@@ -40,6 +42,17 @@ CHECKS_JS = '''() => {
   r.rampFirstLabel = rampLabels[0] || '';
   const sw0 = q('#legend .ramp span');
   r.rampSwatch0 = sw0 ? getComputedStyle(sw0).backgroundColor : '';
+  // marker AREA carries the electorate in every mode; only the colour follows the mode
+  const szs = [...document.querySelectorAll('#legend .size-legend .b span')].map(e => e.textContent.trim());
+  r.sizeFirst = szs[0] || '';
+  r.sizeIsEligible = /בעלי זכות/.test(szs[szs.length - 1] || '');
+  r.radiusModeIndependent = (() => {
+    const s0 = sites[0], keep = state.mode, r0 = radiusOf(s0);
+    const same = ['potential', 'turnout', 'lead', 'delta', 'margin']
+      .every(m => { state.mode = m; return Math.abs(radiusOf(s0) - r0) < 1e-9; });
+    state.mode = keep;
+    return same;
+  })();
   r.statTiles = [...document.querySelectorAll('.stat')].filter(shown).length;
   r.tableCols = document.querySelectorAll('#tvBody thead th').length;
   r.tableRows = document.querySelectorAll('#tvBody tbody tr').length;
@@ -95,6 +108,7 @@ CHECKS_JS = '''() => {
   r.searchUsable = usable('#q');
   r.sortUsable = usable('#sort');
   r.modeSegUsable = usable('#modeSeg');
+  r.mapModeUsable = usable('#mapMode');
   r.mapH = mapShown ? Math.round(mapR.height) : 0;
   r.headerH = Math.round(box('header').height);
   r.filtersOpen = q('#filters')?.open;
@@ -129,6 +143,7 @@ def do(js):       return lambda pg: pg.evaluate(js)
 def mode(m):      return click(f'#modeSeg button[data-mode="{m}"]')
 def pot(t):       return do(f"const s=document.querySelector('#potTarget');s.value='{t}';s.dispatchEvent(new Event('change'))")
 def view(v):      return click(f'#viewTabs button[data-view="{v}"]')
+def mapMode(m):   return do(f"const s=document.querySelector('#mapMode');s.value='{m}';s.dispatchEvent(new Event('change'))")
 def tapMarker():  return lambda pg: pg.locator('path.site-marker').nth(60).click(force=True)
 def tapCardMore(): return click('.mcard-more')
 
@@ -136,16 +151,21 @@ PHONE = dict(width=390, height=844, mobile=True)
 
 # name -> (theme, actions, dims, expectations)
 scenarios = {
-  'light':      ('light', (), {}, {'sidebarRightOfMap': True, 'mode': 'potential', 'sort': 'pot_desc'}),
+  # the map-bar mode control is for the stacked layout only; beside the panel it is noise
+  'light':      ('light', (), {}, {'sidebarRightOfMap': True, 'mode': 'potential', 'sort': 'pot_desc',
+                                   'mapModeUsable': False, 'sizeFirst': '700', 'sizeIsEligible': True}),
   'dark':       ('dark', (), {}, {}),
   'turnout':    ('light', (mode('turnout'),), {}, {'rampFirstLabel': 'עד 40%'}),
   'margin':     ('light', (mode('margin'),), {}, {}),
   'lead':       ('light', (mode('lead'),), {}, {}),
   'delta':      ('light', (mode('delta'),), {}, {'mode': 'delta'}),
-  'potential':  ('light', (mode('potential'),), {}, {'mode': 'potential', 'rampFirstLabel': 'עד 400'}),
+  # potential sizes by the electorate like every other mode — colour carries the metric
+  'potential':  ('light', (mode('potential'),), {}, {'mode': 'potential', 'rampFirstLabel': 'עד 400',
+                                                     'sizeFirst': '700', 'sizeIsEligible': True}),
   'pot_coal':   ('light', (mode('potential'), pot('coalition')), {}, {'potTarget': 'coalition', 'rampFirstLabel': 'עד 100'}),
   'pot_opp':    ('light', (mode('potential'), pot('opposition')), {}, {'potTarget': 'opposition'}),
-  'pot_other':  ('light', (mode('potential'), pot('other')), {}, {'potTarget': 'other'}),
+  'pot_other':  ('light', (mode('potential'), pot('other')), {}, {'potTarget': 'other',
+                                                                  'sizeFirst': '700', 'sizeIsEligible': True}),
   'delta_dark': ('dark', (mode('delta'),), {}, {}),
   'pot_dark':   ('dark', (mode('potential'), pot('opposition')), {}, {}),
   'detail':     ('light', (do("document.querySelectorAll('.site')[3].click()"),), {}, {}),
@@ -157,7 +177,16 @@ scenarios = {
   'narrow':     ('light', (), dict(width=900, height=1100), {}),
 
   # ---- phone scenarios: every one asserts REACHABILITY, not DOM presence ----
-  'phone_map':   ('light', (), PHONE, {'view': 'map', 'modeSegUsable': False}),
+  # on a phone the segmented control is on the other tab, so the map carries its own
+  'phone_map':   ('light', (), PHONE, {'view': 'map', 'modeSegUsable': False,
+                                       'mapModeUsable': True, 'mapMode': 'potential', 'mapPotShown': True}),
+  # changing the mode from the map must not leave the map, and must move both controls
+  'phone_mapmode': ('light', (mapMode('turnout'),), PHONE,
+                  {'view': 'map', 'mode': 'turnout', 'mapMode': 'turnout', 'mapPotShown': False,
+                   'legendTitle': 'אחוז הצבעה באתר', 'mapModeUsable': True}),
+  # ...and the panel's own control still drives the map-bar copy
+  'phone_mapmode_sync': ('light', (view('list'), click('#filters > summary'), mode('lead'), view('map')), PHONE,
+                  {'view': 'map', 'mapMode': 'lead', 'mapPotShown': False}),
   'phone_list':  ('light', (view('list'),), PHONE,
                   {'view': 'list', 'listOnScreen': True, 'sortUsable': True}),
   'phone_filt':  ('light', (view('list'), click('#filters > summary')), PHONE,
@@ -199,6 +228,8 @@ if __name__ == "__main__":
         if c['legendOverlapsAttribution']: problems.append('legend overlaps attribution')
         if c.get('escaped'): problems.append(f"overlay escaped its container: {c['escaped']}")
         if c.get('coveredByTable') is False: problems.append('table view does not cover the map')
+        if c.get('radiusModeIndependent') is False:
+            problems.append('marker radius changes with the colour mode')
         if 'table' not in n and c['markers'] == 0 and c['view'] != 'list':
             problems.append('no markers rendered')
         if c['tiles'] == 0 and c['view'] != 'list' and not offline:

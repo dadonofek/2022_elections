@@ -16,15 +16,17 @@ need an internet connection.
 
 * **One marker per polling site.** Marker **area** is proportional to the number of
   **eligible voters** the site serves (not the number who voted), so a large pale
-  marker in turnout mode is a big electorate that largely stayed home. Marker
-  **color** follows the selected mode.
+  marker in turnout mode is a big electorate that largely stayed home. The area means
+  that in **every** mode — only the marker **color** follows the selected mode, so
+  switching modes never resizes the map.
 * **Five color modes** (*פוטנציאל* is the default)
   * *פוטנציאל* — how many votes are sitting at this site and did not turn up:
     `eligible x (1 - turnout) x the bloc's share of the votes cast here`. A
     `הגוש שלי` selector picks whose votes to count; unset, it shows raw non-voters.
-    Hue says *which* bloc, lightness says *how many*, and the marker area follows
-    the potential rather than the electorate. **It is an estimate, not a forecast** —
-    see the caveats in *על הנתונים*.
+    Hue says *which* bloc and lightness says *how many*, while the marker area keeps
+    carrying the electorate — so a large dark marker is a big electorate with a lot of
+    it still on the table, and a small dark one is a small electorate that barely voted.
+    **It is an estimate, not a forecast** — see the caveats in *על הנתונים*.
   * *אחוז הצבעה* — turnout, as a **purple** light→dark ramp, deliberately not a bloc
     colour so it never reads as "everything voted for one party".
   * *פער מהארצי* — each site against the **national** turnout of the same election
@@ -46,7 +48,10 @@ need an internet connection.
   its national delta, leading bloc — and the full site panel is reached only through
   that card's *כל הנתונים באתר* button, so identifying a circle never costs you the map.
   On a pointer device the marker keeps its hover tooltip and a click fills the panel
-  beside the map.
+  beside the map. The **color mode** also gets its own select on the map bar in this
+  layout (with the `הגוש שלי` select beside it in potential mode), bound to the same
+  state as the filter panel's segmented control — that panel is on the other tab, so
+  picking a mode there meant three taps and no view of the map being painted.
 * **Site detail** (click a marker or a list row): bloc split, largest parties, a
   collapsible per-station breakdown (*פירוט לפי קלפי*, collapsed by default), the full
   vote table, and the location accuracy for that site.
@@ -143,14 +148,16 @@ python3 test_map.py                      # all scenarios
 python3 test_map.py dark                 # one scenario
 ```
 
-Thirty scenarios — light, dark, each of the five color modes, each potential
+Thirty-two scenarios — light, dark, each of the five color modes, each potential
 target, detail, labels, table, sorting, filter, search, marker interaction on both
-touch and pointer layouts, and **ten phone scenarios at 390x844 with touch** — are
+touch and pointer layouts, and **twelve phone scenarios at 390x844 with touch** — are
 rendered headlessly and checked for JS errors, failed
 requests, horizontal overflow, clipped controls, markers and tiles rendering, overlays
 escaping their container, the table view covering the map, the sidebar sitting to the
 right of the map under RTL, legend ramp labels running in the same direction as
-their swatches, and a marker tap on a phone opening its card without leaving the map.
+their swatches, a marker tap on a phone opening its card without leaving the map, the
+map-bar mode control staying in step with the panel's, and the marker radius not moving
+when the color mode changes.
 Screenshots land in `build/`.
 
 The phone scenarios assert controls are **reachable** — on screen, with real size — not

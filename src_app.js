@@ -321,14 +321,11 @@ function renderLegend() {
          (${pct(DATA.city.turnout)}). ${n} מתוך ${vis.length} אתרים בתצוגה מגיעים לממוצע הארצי.</p>` + sizeLegend();
   } else if (state.mode === 'potential') {
     const b = POT_BINS[state.potTarget], vars = POT_VARS[state.potTarget];
-    const total = vis.reduce((a, x) => a + potValue(x), 0);
     el.innerHTML = `<h3>${POT_LABEL[state.potTarget]}</h3>
       <div class="ramp">${vars.map(v => `<span style="background:${cssVar(v)}"></span>`).join('')}</div>
       <div class="ramp-labels"><span>עד ${num(b[0])}</span><span>${num(b[1])}</span><span>${num(b[b.length - 1])}+</span></div>
       <p class="legend-note">סמן גדול וכהה = ציבור בוחרים גדול שהרבה ממנו לא הגיע לקלפי
-         (שטח = בעלי זכות, צבע = הפוטנציאל). סה״כ ${num(total)} קולות ב-${vis.length} האתרים שבתצוגה.
-         ${state.potTarget === 'none' ? 'מספר בעלי זכות הבחירה שלא הצביעו.'
-           : 'הערכה: בעלי זכות שלא הצביעו × שיעור הגוש בקולות שכן נספרו באתר.'}</p>` + sizeLegend();
+         (שטח = בעלי זכות, צבע = הפוטנציאל).</p>` + sizeLegend();
   } else {
     el.innerHTML = `<h3>פער בין הגושים (2022)</h3>
       <div class="ramp">${MARGIN_VARS.map(v => `<span style="background:${cssVar(v)}"></span>`).join('')}</div>

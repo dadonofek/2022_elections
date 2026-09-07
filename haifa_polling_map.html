@@ -676,24 +676,27 @@ svg.leaflet-image-layer.leaflet-interactive path {
   --surface-0:#f4f3f0; --surface-1:#fcfcfb; --surface-2:#eceae5;
   --border:#dcd9d2; --border-strong:#bfbbb2;
   --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#77756e;
-  --bloc-coalition:#2a78d6; --bloc-opposition:#eb6834; --bloc-other:#1baf7a;
+  --bloc-coalition:#eb6834; --bloc-opposition:#2a78d6; --bloc-other:#1baf7a;
   --accent:#2a78d6; --accent-ink:#fff;
   --ring:#fcfcfb;
   /* turnout ramp: purple — deliberately not a bloc colour so it never reads as a party */
   --seq-0:#eadcf3; --seq-1:#d0aee4; --seq-2:#b681d3; --seq-3:#9455b8; --seq-4:#6f3a90; --seq-5:#4a2465;
-  --div-opp-3:#c94f1c; --div-opp-2:#ef8f5f; --div-opp-1:#f6c3a7;
+  --div-opp-3:#1c5cab; --div-opp-2:#3987e5; --div-opp-1:#9ec5f4;
   --div-mid:#e6e4df;
-  --div-coal-1:#9ec5f4; --div-coal-2:#3987e5; --div-coal-3:#1c5cab;
+  --div-coal-1:#f6c3a7; --div-coal-2:#ef8f5f; --div-coal-3:#c94f1c;
   /* turnout-delta ramp (rose). Sequential, not diverging: measured against the
      national average 123 of Haifa's 140 sites sit below it, so the data is
-     one-sided. Rose is the one hue far enough from the coalition blue and the
-     opposition orange to never read as a bloc (worst CVD dE 11.2 / 12.5);
+     one-sided. Rose is the one hue far enough from both bloc hues — the opposition
+     blue and the coalition orange — to never read as a bloc (worst CVD dE 11.2 / 12.5);
      validated with the dataviz skill's validator as an ordinal ramp. */
   --dlt-none:#b0ada4;
   --dlt-0:#fe87af; --dlt-1:#e46f97; --dlt-2:#ca5881; --dlt-3:#b0416b; --dlt-4:#972956;
-  /* potential ramps: hue says WHICH bloc, lightness says HOW MANY votes */
-  --pot-coal-0:#7db5ff; --pot-coal-1:#509cfd; --pot-coal-2:#3784e4; --pot-coal-3:#1d6dca; --pot-coal-4:#0557ac;
-  --pot-opp-0:#fe9671; --pot-opp-1:#f5713e; --pot-opp-2:#db5923; --pot-opp-3:#bf4301; --pot-opp-4:#9c3604;
+  /* potential ramps: hue says WHICH bloc, lightness says HOW MANY votes. These and the
+     rose ramp above are NOT redefined for dark mode: the legend says "big and dark =
+     a lot still on the table", so darker has to keep meaning "more" in both themes.
+     Every dark end still clears 2.5:1 against the dark surface. */
+  --pot-coal-0:#fe9671; --pot-coal-1:#f5713e; --pot-coal-2:#db5923; --pot-coal-3:#bf4301; --pot-coal-4:#9c3604;
+  --pot-opp-0:#7db5ff; --pot-opp-1:#509cfd; --pot-opp-2:#3784e4; --pot-opp-3:#1d6dca; --pot-opp-4:#0557ac;
   --pot-oth-0:#42c891; --pot-oth-1:#1caf7a; --pot-oth-2:#149567; --pot-oth-3:#0c7c55; --pot-oth-4:#056443;
   --shadow:0 1px 2px rgba(0,0,0,.06),0 6px 20px rgba(0,0,0,.08);
   --radius:10px;
@@ -705,18 +708,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
     --surface-0:#121211; --surface-1:#1a1a19; --surface-2:#242423;
     --border:#33332f; --border-strong:#4a4a45;
     --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#94938a;
-    --bloc-coalition:#3987e5; --bloc-opposition:#d95926; --bloc-other:#199e70;
+    --bloc-coalition:#d95926; --bloc-opposition:#3987e5; --bloc-other:#199e70;
     --accent:#3987e5; --accent-ink:#0b0b0b;
     --ring:#1a1a19;
     --seq-0:#3d1d5c; --seq-1:#5c2f82; --seq-2:#7e4aa6; --seq-3:#a273c6; --seq-4:#c6a0e0; --seq-5:#e6d3f4;
-    --div-opp-3:#f0a077; --div-opp-2:#d95926; --div-opp-1:#8a4423;
+    --div-opp-3:#9ec5f4; --div-opp-2:#3987e5; --div-opp-1:#1c5cab;
     --div-mid:#383835;
-    --div-coal-1:#1c5cab; --div-coal-2:#3987e5; --div-coal-3:#9ec5f4;
+    --div-coal-1:#8a4423; --div-coal-2:#d95926; --div-coal-3:#f0a077;
     --dlt-none:#5b5b54;
-    --dlt-0:#8f204f; --dlt-1:#a83964; --dlt-2:#c1507a; --dlt-3:#db6890; --dlt-4:#f57fa7;
-    --pot-coal-0:#004c9a; --pot-coal-1:#0961bd; --pot-coal-2:#2a78d6; --pot-coal-3:#438ff0; --pot-coal-4:#66a8fe;
-    --pot-opp-0:#8b2e00; --pot-opp-1:#ab3d06; --pot-opp-2:#cd4c0f; --pot-opp-3:#e76530; --pot-opp-4:#fd8051;
-    --pot-oth-0:#09583c; --pot-oth-1:#01714c; --pot-oth-2:#088a5e; --pot-oth-3:#11a371; --pot-oth-4:#32bc86;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.5);
   }
 }
@@ -725,18 +724,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
   --surface-0:#121211; --surface-1:#1a1a19; --surface-2:#242423;
   --border:#33332f; --border-strong:#4a4a45;
   --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#94938a;
-  --bloc-coalition:#3987e5; --bloc-opposition:#d95926; --bloc-other:#199e70;
+  --bloc-coalition:#d95926; --bloc-opposition:#3987e5; --bloc-other:#199e70;
   --accent:#3987e5; --accent-ink:#0b0b0b;
   --ring:#1a1a19;
   --seq-0:#3d1d5c; --seq-1:#5c2f82; --seq-2:#7e4aa6; --seq-3:#a273c6; --seq-4:#c6a0e0; --seq-5:#e6d3f4;
-  --div-opp-3:#f0a077; --div-opp-2:#d95926; --div-opp-1:#8a4423;
+  --div-opp-3:#9ec5f4; --div-opp-2:#3987e5; --div-opp-1:#1c5cab;
   --div-mid:#383835;
-  --div-coal-1:#1c5cab; --div-coal-2:#3987e5; --div-coal-3:#9ec5f4;
+  --div-coal-1:#8a4423; --div-coal-2:#d95926; --div-coal-3:#f0a077;
   --dlt-none:#5b5b54;
-  --dlt-0:#8f204f; --dlt-1:#a83964; --dlt-2:#c1507a; --dlt-3:#db6890; --dlt-4:#f57fa7;
-  --pot-coal-0:#004c9a; --pot-coal-1:#0961bd; --pot-coal-2:#2a78d6; --pot-coal-3:#438ff0; --pot-coal-4:#66a8fe;
-  --pot-opp-0:#8b2e00; --pot-opp-1:#ab3d06; --pot-opp-2:#cd4c0f; --pot-opp-3:#e76530; --pot-opp-4:#fd8051;
-  --pot-oth-0:#09583c; --pot-oth-1:#01714c; --pot-oth-2:#088a5e; --pot-oth-3:#11a371; --pot-oth-4:#32bc86;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.5);
 }
 
@@ -1533,14 +1528,11 @@ function renderLegend() {
          (${pct(DATA.city.turnout)}). ${n} מתוך ${vis.length} אתרים בתצוגה מגיעים לממוצע הארצי.</p>` + sizeLegend();
   } else if (state.mode === 'potential') {
     const b = POT_BINS[state.potTarget], vars = POT_VARS[state.potTarget];
-    const total = vis.reduce((a, x) => a + potValue(x), 0);
     el.innerHTML = `<h3>${POT_LABEL[state.potTarget]}</h3>
       <div class="ramp">${vars.map(v => `<span style="background:${cssVar(v)}"></span>`).join('')}</div>
       <div class="ramp-labels"><span>עד ${num(b[0])}</span><span>${num(b[1])}</span><span>${num(b[b.length - 1])}+</span></div>
       <p class="legend-note">סמן גדול וכהה = ציבור בוחרים גדול שהרבה ממנו לא הגיע לקלפי
-         (שטח = בעלי זכות, צבע = הפוטנציאל). סה״כ ${num(total)} קולות ב-${vis.length} האתרים שבתצוגה.
-         ${state.potTarget === 'none' ? 'מספר בעלי זכות הבחירה שלא הצביעו.'
-           : 'הערכה: בעלי זכות שלא הצביעו × שיעור הגוש בקולות שכן נספרו באתר.'}</p>` + sizeLegend();
+         (שטח = בעלי זכות, צבע = הפוטנציאל).</p>` + sizeLegend();
   } else {
     el.innerHTML = `<h3>פער בין הגושים (2022)</h3>
       <div class="ramp">${MARGIN_VARS.map(v => `<span style="background:${cssVar(v)}"></span>`).join('')}</div>

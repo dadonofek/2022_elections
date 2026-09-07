@@ -47,7 +47,7 @@ Address→site match confidence, carried over from the spreadsheet: 133 גבוה
 * Five color modes, **potential is the default**: **potential** (votes left on the table,
   sequential on the selected bloc's hue), **turnout** (single-hue sequential ramp),
   **delta vs the national average** (rose deficit ramp), **leading bloc** (categorical),
-  **bloc margin** (diverging blue<->orange, gray midpoint). The list defaults to
+  **bloc margin** (diverging orange<->blue, gray midpoint). The list defaults to
   potential-descending, and below 1000px the map and list are separate tabs, where a
   marker tap opens a compact card on the map rather than jumping to the site panel.
   In that layout the map bar also carries its own **colour-mode select** (plus the
@@ -173,22 +173,29 @@ several of those choices look arbitrary without the measurements behind them.
 ## Color rules being followed (dataviz skill)
 
 Palettes were validated with the skill's `scripts/validate_palette.js`, not eyeballed.
-Categorical blocs use slots 1–3 (`#2a78d6` / `#eb6834` / `#1baf7a`), which pass all-pairs
-CVD checks in both modes. The sequential turnout ramp starts at `#86b6ef` so the lightest
-step clears the 2:1 floor. The diverging margin scale reuses the same blue/orange bloc hues
+Categorical blocs use slots 1–3 — **opposition `#2a78d6` (blue), coalition `#eb6834`
+(orange), other `#1baf7a`** — which pass all-pairs CVD checks in both modes. The two bloc
+hues were swapped on request; it is the same validated triple, only reassigned, so the
+separation measurements below still hold with the bloc names exchanged. The sequential turnout ramp starts at `#86b6ef` so the lightest
+step clears the 2:1 floor. The diverging margin scale reuses the same bloc hues
 so a bloc keeps its color across modes. If you change any palette, re-run the validator:
 `node <dataviz-skill>/scripts/validate_palette.js "<hex,hex,...>" --mode light`.
 
 The **turnout-delta ramp is rose (OKLCH hue 0)**, chosen by measurement after two
-candidates were rejected: gold collapses to **dE 2.5** against the opposition orange
+candidates were rejected: gold collapses to **dE 2.5** against the coalition orange
 under deuteranopia (a colourblind reader would read "below baseline" as "opposition"),
-and crimson at hue 25 lands **dE 4.7**. Rose clears **11.2** from orange and **12.5**
-from blue, and passes the ordinal checks (monotone L, adjacent dL >= 0.06, light-end
+and crimson at hue 25 lands **dE 4.7**. Rose clears **11.2** from the orange and **12.5**
+from the blue, and passes the ordinal checks (monotone L, adjacent dL >= 0.06, light-end
 contrast >= 2:1, single hue) in both modes. It is **sequential, not diverging**, because
 against the national baseline 123 of the 140 sites are below it — a symmetric scale would
 spend half its range on 17 sites. The **potential ramps are sequential ramps on the
 existing bloc hues**, so hue keeps meaning "which bloc" and lightness carries the
-magnitude; all six were validated the same way.
+magnitude; all six were validated the same way. **They are not redefined for dark mode**,
+and neither is the rose ramp: the legend tells the reader "big and dark = a lot still on
+the table", so darker has to keep meaning *more* in both themes. Every dark end still
+clears 2.5:1 against the dark surface. The turnout ramp still inverts in dark mode, so its
+`בהיר` wording reads backwards there — the one remaining case, left alone because a shared
+ramp would put `--seq-5` at 1.55:1 on the dark surface.
 
 **Known, not fixed:** the turnout ramp's lightest step `--seq-0:#eadcf3` measures
 **1.28:1** against the light surface, below the 2:1 ordinal floor — this document's

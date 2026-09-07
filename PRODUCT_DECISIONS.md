@@ -38,7 +38,7 @@ the size of the actual electorate. That number is now the first header tile.
   no attribution — so the map does not pick a side unless the reader does.
 - **Hue says which bloc, lightness says how many.** Rather than invent new hues, the
   potential ramp is a sequential ramp built on the *existing* bloc hue: pick coalition
-  and you get a blue ramp, opposition an orange one. Consistent with everything else on
+  and you get its ramp — orange for the coalition, blue for the opposition. Consistent with everything else on
   the map, and no new semantics to learn.
 - ~~**Marker area follows the potential in this mode**, not the electorate — otherwise the
   headline number is not the thing the eye is measuring.~~ **Superseded in Round 3:** it
@@ -83,16 +83,16 @@ The national figure is **derived, not asserted**: `build_data.py` recomputes it 
 
 *(PM delegated this one.)*
 
-Blue, orange, green and purple are already spoken for (coalition, opposition, other
+Blue, orange, green and purple are already spoken for (the two blocs, other
 lists, turnout). The delta ramp must not read as a bloc. Two candidates were **measured
 and rejected** with the dataviz skill's validator:
 
-- **gold ↔ teal** — gold collapses to **ΔE 2.5** against opposition orange under
+- **gold ↔ teal** — gold collapses to **ΔE 2.5** against the bloc orange under
   deuteranopia. A colourblind reader would read "below baseline" as "opposition".
-- **crimson (hue 25)** — one step lands **ΔE 4.7** from opposition orange.
+- **crimson (hue 25)** — one step lands **ΔE 4.7** from the bloc orange.
 
-**Chosen: rose, OKLCH hue 0.** Worst separation ΔE **11.2** from opposition orange and
-**12.5** from coalition blue; passes all four ordinal checks (monotone lightness,
+**Chosen: rose, OKLCH hue 0.** Worst separation ΔE **11.2** from the bloc orange and
+**12.5** from the bloc blue; passes all four ordinal checks (monotone lightness,
 adjacent ΔL ≥ 0.06, light-end contrast ≥ 2:1, single hue) in **both** light and dark.
 
 ```
@@ -324,3 +324,53 @@ scale, one size legend, `700 / 1,600 / 3,500` בעלי זכות in every mode.
 **Regression check:** `radiusModeIndependent` evaluates `radiusOf()` for the same site
 under all five modes and asserts the radius does not move — run on every scenario, not
 just the potential ones.
+
+---
+
+# Round 4 — palette, and a legend that told the truth in only one theme
+
+Three small things, reported off one screenshot of the phone in dark mode.
+
+## 4.1 Opposition is blue, coalition is orange
+
+**Asked:** opposition blue, everywhere in the project.
+
+**Done as a swap of the two bloc values, not a new palette.** `--bloc-coalition` and
+`--bloc-opposition` exchange hexes, and so do the pairs built on them: the diverging
+margin scale (`--div-opp-*` ↔ `--div-coal-*`) and the potential ramps
+(`--pot-coal-*` ↔ `--pot-opp-*`), in both themes. Nothing in the JS refers to a hue — it
+reads `BLOC_VAR` — so the swap is entirely in the tokens.
+
+It is the **same validated triple**, only reassigned, so every all-pairs CVD measurement
+still holds with the bloc names exchanged; the rose delta ramp keeps its ΔE 11.2 / 12.5
+clearance from both. A bloc still keeps one colour across every mode. `--accent` stays
+`#2a78d6`, which now matches the opposition rather than the coalition — it is UI chrome
+(buttons, focus rings, party bars), and it was equally tied to a bloc hue before.
+
+## 4.2 "Big and dark" was only true in light mode
+
+**Reported:** the legend note and the colour scale contradict each other.
+
+They did, in dark mode only. Every sequential ramp was inverted for dark mode — light =
+high, the usual "more ink on a dark ground" convention — but the note says
+`סמן גדול וכהה = ציבור בוחרים גדול שהרבה ממנו לא הגיע לקלפי`. In dark mode the darkest
+markers were the sites with the *least* potential, i.e. exactly backwards.
+
+**Decided: the words win.** The potential ramps and the rose ramp are no longer redefined
+for dark mode — one ramp, both themes, darker always meaning *more*. Their dark ends were
+checked against the dark surface and clear **2.5:1**, above the 2:1 ordinal floor, so the
+deepest step stays readable. The cost is real and accepted: on a dark ground a dark marker
+recedes, so the highest-potential sites are no longer the most luminous ones. A rule the
+reader can trust is worth more than the extra pop.
+
+**Not fixed:** the turnout ramp still inverts in dark mode, so its own note
+(`סמן גדול ובהיר…`) reads backwards there. Sharing the light ramp would put `--seq-5`
+(`#4a2465`) at **1.55:1** against the dark surface — it needs a new dark-mode ramp
+authored in the same direction, not a deletion. Left for a decision.
+
+## 4.3 The potential legend said too much
+
+The note carried the reading rule, the filtered total, and the estimate caveat — six lines
+in a 190px box on a phone. Trimmed to the reading rule alone. Nothing is lost: the city
+total is the first header tile, the filtered count is in the list header above the list,
+and the estimate caveat is in both the site panel and `על הנתונים`.

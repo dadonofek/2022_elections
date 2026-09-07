@@ -33,6 +33,15 @@ CHECKS_JS = '''() => {
   r.mapPotShown = shown(q('#mapPotTarget'));
   r.sort = q('#sort')?.value;
   r.potTarget = q('#potTarget')?.value;
+  r.camp = q('#camp')?.value;
+  r.campUsable = false;                      // filled in below with the other reachability checks
+  // the camp must reach every surface it claims to drive, not just the legend
+  r.campInPotOption = q('#potTarget option[value="camp"]')?.textContent.trim();
+  r.campInMapPotOption = q('#mapPotTarget option[value="camp"]')?.textContent.trim();
+  r.campInSortOption = q('#sort option[value="camp_desc"]')?.textContent.trim();
+  r.statFirst = document.querySelector('.stat .k')?.textContent.trim();
+  r.listFirstMetric = q('.site .m span')?.textContent.trim();
+  r.tableKeys = [...document.querySelectorAll('#tvBody thead th')].map(e => e.dataset.key);
   r.view = document.body.dataset.view;
   r.legendTitle = q('#legend h3')?.textContent || '';
   // Ramp swatches and their labels must run in the same direction. The first DOM
@@ -109,6 +118,7 @@ CHECKS_JS = '''() => {
   r.sortUsable = usable('#sort');
   r.modeSegUsable = usable('#modeSeg');
   r.mapModeUsable = usable('#mapMode');
+  r.campUsable = usable('#camp');
   r.mapH = mapShown ? Math.round(mapR.height) : 0;
   r.headerH = Math.round(box('header').height);
   r.filtersOpen = q('#filters')?.open;
@@ -142,6 +152,7 @@ def click(sel):   return lambda pg: pg.click(sel)
 def do(js):       return lambda pg: pg.evaluate(js)
 def mode(m):      return click(f'#modeSeg button[data-mode="{m}"]')
 def pot(t):       return do(f"const s=document.querySelector('#potTarget');s.value='{t}';s.dispatchEvent(new Event('change'))")
+def camp(c):      return do(f"const s=document.querySelector('#camp');s.value='{c}';s.dispatchEvent(new Event('change'))")
 def view(v):      return click(f'#viewTabs button[data-view="{v}"]')
 def mapMode(m):   return do(f"const s=document.querySelector('#mapMode');s.value='{m}';s.dispatchEvent(new Event('change'))")
 def tapMarker():  return lambda pg: pg.locator('path.site-marker').nth(60).click(force=True)
@@ -152,25 +163,48 @@ PHONE = dict(width=390, height=844, mobile=True)
 # name -> (theme, actions, dims, expectations)
 scenarios = {
   # the map-bar mode control is for the stacked layout only; beside the panel it is noise
+  # the map opens ON the default camp: its potential is the colour, the first header
+  # tile, the list's headline figure and the name inside the target/sort controls
   'light':      ('light', (), {}, {'sidebarRightOfMap': True, 'mode': 'potential', 'sort': 'pot_desc',
-                                   'mapModeUsable': False, 'sizeFirst': '700', 'sizeIsEligible': True}),
+                                   'mapModeUsable': False, 'sizeFirst': '700', 'sizeIsEligible': True,
+                                   'camp': 'dem', 'potTarget': 'camp', 'campUsable': True,
+                                   'legendTitle': 'פוטנציאל הדמוקרטים',
+                                   'statFirst': 'פוטנציאל הדמוקרטים',
+                                   'campInPotOption': 'הדמוקרטים', 'campInMapPotOption': 'הדמוקרטים',
+                                   'campInSortOption': 'שיעור הדמוקרטים',
+                                   'listFirstMetric': '364 פוטנציאל הדמוקרטים'}),
   'dark':       ('dark', (), {}, {}),
   'turnout':    ('light', (mode('turnout'),), {}, {'rampFirstLabel': 'עד 40%'}),
   'margin':     ('light', (mode('margin'),), {}, {}),
   'lead':       ('light', (mode('lead'),), {}, {}),
   'delta':      ('light', (mode('delta'),), {}, {'mode': 'delta'}),
   # potential sizes by the electorate like every other mode — colour carries the metric
-  'potential':  ('light', (mode('potential'),), {}, {'mode': 'potential', 'rampFirstLabel': 'עד 400',
+  'potential':  ('light', (mode('potential'),), {}, {'mode': 'potential', 'rampFirstLabel': 'עד 50',
                                                      'sizeFirst': '700', 'sizeIsEligible': True}),
+  'pot_none':   ('light', (mode('potential'), pot('none')), {}, {'potTarget': 'none', 'rampFirstLabel': 'עד 400',
+                                                                 'legendTitle': 'קולות שלא הגיעו'}),
   'pot_coal':   ('light', (mode('potential'), pot('coalition')), {}, {'potTarget': 'coalition', 'rampFirstLabel': 'עד 100'}),
-  'pot_opp':    ('light', (mode('potential'), pot('opposition')), {}, {'potTarget': 'opposition'}),
+  # switching the camp repoints the SAME target: the option keeps its value and every
+  # surface that names the camp moves with it
+  'pot_opp':    ('light', (mode('potential'), camp('opposition')), {},
+                 {'potTarget': 'camp', 'camp': 'opposition', 'rampFirstLabel': 'עד 100',
+                  'legendTitle': 'פוטנציאל אופוזיציה רחבה', 'statFirst': 'פוטנציאל אופוזיציה',
+                  'campInSortOption': 'שיעור אופוזיציה רחבה'}),
   'pot_other':  ('light', (mode('potential'), pot('other')), {}, {'potTarget': 'other',
                                                                   'sizeFirst': '700', 'sizeIsEligible': True}),
   'delta_dark': ('dark', (mode('delta'),), {}, {}),
-  'pot_dark':   ('dark', (mode('potential'), pot('opposition')), {}, {}),
+  'pot_dark':   ('dark', (mode('potential'), camp('opposition')), {}, {}),
+  'pot_dem_dark': ('dark', (mode('potential'),), {}, {'camp': 'dem', 'legendTitle': 'פוטנציאל הדמוקרטים'}),
   'detail':     ('light', (do("document.querySelectorAll('.site')[3].click()"),), {}, {}),
   'labels':     ('light', (click('#btnLabels'), do("map.setZoom(15)")), {}, {}),
-  'table':      ('light', (click('#btnTable'),), {}, {'coveredByTable': True}),
+  'table':      ('light', (click('#btnTable'),), {}, {'coveredByTable': True,
+                 'tableKeys': ['kalpi', 'name', 'address', 'n_kalpi', 'eligible', 'voters', 'turnout',
+                               'dnat', 'dcity', 'nonv', 'potcamp', 'potc', 'poto', 'valid', 'invalid',
+                               'coal', 'opp', 'campshare', 'oth', 'lead', 'lat', 'lon']}),
+  'table_opp':  ('light', (camp('opposition'), click('#btnTable')), {}, {'coveredByTable': True,
+                 'tableKeys': ['kalpi', 'name', 'address', 'n_kalpi', 'eligible', 'voters', 'turnout',
+                               'dnat', 'dcity', 'nonv', 'potc', 'poto', 'valid', 'invalid',
+                               'coal', 'opp', 'oth', 'lead', 'lat', 'lon']}),
   'sort_delta': ('light', (do("const s=document.querySelector('#sort');s.value='delta_asc';s.dispatchEvent(new Event('change'))"),), {}, {'sort': 'delta_asc'}),
   'filter':     ('light', (do("for(const [id,v] of [['#turnoutMin',55],['#turnoutMax',70]]){const e=document.querySelector(id);e.value=v;e.dispatchEvent(new Event('input'))}"),), {}, {}),
   'search':     ('light', (do("const q=document.querySelector('#q');q.value='הרצל';q.dispatchEvent(new Event('input'))"),), {}, {}),
@@ -192,8 +226,12 @@ scenarios = {
   'phone_filt':  ('light', (view('list'), click('#filters > summary')), PHONE,
                   {'searchUsable': True, 'filtersOpen': True}),
   'phone_menu':  ('light', (click('#btnMenu'),), PHONE, {'menuOpen': True}),
-  'phone_stats': ('light', (click('#btnStatsMore'),), PHONE, {'statTiles': 7}),
-  'phone_table': ('light', (click('#btnMenu'), click('#btnTable')), PHONE, {'tableCols': 6}),
+  'phone_stats': ('light', (click('#btnStatsMore'),), PHONE, {'statTiles': 8}),
+  # the phone's 6-column subset spends one of its slots on the camp, not the bloc
+  'phone_table': ('light', (click('#btnMenu'), click('#btnTable')), PHONE,
+                  {'tableCols': 6, 'tableKeys': ['name', 'turnout', 'dnat', 'nonv', 'potcamp', 'potc']}),
+  'phone_table_opp': ('light', (camp('opposition'), click('#btnMenu'), click('#btnTable')), PHONE,
+                  {'tableCols': 6, 'tableKeys': ['name', 'turnout', 'dnat', 'nonv', 'potc', 'poto']}),
   'phone_detail':('light', (view('map'), do("document.querySelectorAll('.site')[2].click()")), PHONE,
                   {'view': 'list'}),
   # tapping a circle must NOT leave the map — it opens a card in place

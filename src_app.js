@@ -17,6 +17,28 @@ const BLOC_LABEL = {
 const BLOC_VAR = { coalition: '--bloc-coalition', opposition: '--bloc-opposition', other: '--bloc-other' };
 const blocColor = b => cssVar(BLOC_VAR[b] || '--text-muted');
 
+// A CAMP is who the map is counting FOR — it drives the potential, the list, the
+// sort and the table. It is not a fourth bloc: הדמוקרטים (העבודה + מרצ) sits INSIDE
+// the broad opposition, so it is carried alongside the partition, never instead of
+// part of it, and the bloc split / lead / margin keep using the blocs. Defined in
+// config.py, so another election swaps the camps without touching this file.
+const CAMPS = DATA.camps;
+const CAMP_KEYS = Object.keys(CAMPS);
+const campName = (c = state.camp) => CAMPS[c].name;
+const campNote = (c = state.camp) => CAMPS[c].note || '';
+// the about panel has room for the full version; the legend and the site card do not
+const campNoteLong = (c = state.camp) => CAMPS[c].note_long || campNote(c);
+// the header tile cannot wrap its label, so it takes the short name when there is one
+const campShort = (c = state.camp) => CAMPS[c].short || CAMPS[c].name;
+// a camp that is a bloc keeps the bloc's colour; one of its own gets --camp-<key>
+const campColor = (c = state.camp) => cssVar(BLOC_VAR[c] || `--camp-${c}`);
+const campVotes = (o, c = state.camp) => o[c];
+// City-wide potential is the SUM OF THE SITES, not DATA.city.pot: the city figure
+// applies one city-wide vote share to all 112,642 non-voters, while the map, the list
+// and the legend total each site by its own mix. The two differ by ~4% for a camp, and
+// the header must not print a number the legend below it contradicts.
+const cityPot = (c = state.camp) => sites.reduce((a, s) => a + s.pot[c], 0);
+
 // turnout ramp: one hue, light -> dark, 6 bins
 const TURNOUT_BINS = [40, 48, 55, 62, 70];      // upper edges of bins 0..4
 const TURNOUT_VARS = ['--seq-0', '--seq-1', '--seq-2', '--seq-3', '--seq-4', '--seq-5'];
@@ -45,31 +67,36 @@ const deltaColor = s => cssVar(DELTA_VARS[deltaIdx(deltaNat(s))]);
 // potential: eligible x (1 - turnout) x the bloc's share of the votes actually
 // cast here — i.e. the non-voters at this site, attributed by how their voting
 // neighbours voted. Hue says WHICH bloc, lightness says HOW MANY votes.
+// The target `camp` is not a fixed key: it resolves to whichever camp is selected,
+// so picking הדמוקרטים repoints the potential — and the list, sort and table with it —
+// without a second control for every camp.
+const potKey = () => (state.potTarget === 'camp' ? state.camp : state.potTarget);
 const POT_LABEL = {
   none: 'קולות שלא הגיעו', coalition: 'פוטנציאל קואליציה',
   opposition: 'פוטנציאל אופוזיציה', other: 'פוטנציאל רשימות אחרות',
 };
-const POT_SHORT = {
-  none: 'כל מי שלא הצביע', coalition: 'קואליציית 2022',
-  opposition: 'אופוזיציה רחבה', other: 'רשימות אחרות',
-};
+const potLabel = () => (state.potTarget === 'camp' ? `פוטנציאל ${campName()}` : POT_LABEL[state.potTarget]);
 const POT_VARS = {
   none: ['--dlt-0', '--dlt-1', '--dlt-2', '--dlt-3', '--dlt-4'],
   coalition: ['--pot-coal-0', '--pot-coal-1', '--pot-coal-2', '--pot-coal-3', '--pot-coal-4'],
   opposition: ['--pot-opp-0', '--pot-opp-1', '--pot-opp-2', '--pot-opp-3', '--pot-opp-4'],
   other: ['--pot-oth-0', '--pot-oth-1', '--pot-oth-2', '--pot-oth-3', '--pot-oth-4'],
+  dem: ['--pot-dem-0', '--pot-dem-1', '--pot-dem-2', '--pot-dem-3', '--pot-dem-4'],
 };
 // fixed bins, never quantiles of the filtered set — a colour must not change
-// meaning when the user filters. 'other' gets its own scale (site max 97, not 1532).
+// meaning when the user filters. Every target that spans a different range gets its
+// own scale: 'other' tops out at 97 per site and 'dem' at 364, against 1,532 for the
+// opposition, so one shared scale would paint both of them flat.
 const POT_BINS = {
   none: [400, 800, 1200, 1600], coalition: [100, 250, 450, 700],
   opposition: [100, 250, 450, 700], other: [10, 25, 45, 70],
+  dem: [50, 100, 175, 260],
 };
-const potValue = s => (state.potTarget === 'none' ? s.non_voters : s.pot[state.potTarget]);
+const potValue = s => (potKey() === 'none' ? s.non_voters : s.pot[potKey()]);
 const potColor = s => {
-  const b = POT_BINS[state.potTarget]; const v = potValue(s);
+  const k = potKey(), b = POT_BINS[k]; const v = potValue(s);
   let i = 0; while (i < b.length && v >= b[i]) i++;
-  return cssVar(POT_VARS[state.potTarget][i]);
+  return cssVar(POT_VARS[k][i]);
 };
 
 const colorOf = s => state.mode === 'lead' ? blocColor(s.lead)
@@ -101,7 +128,10 @@ const signed = (n, d = 1) => (n > 0 ? '+' : '') + n.toFixed(d).replace(/\.0$/, '
 // ---------------------------------------------------------------- state
 const state = {
   mode: 'potential',
-  potTarget: 'none',
+  // the map is a campaign tool for a camp, so it opens on that camp's potential
+  // rather than on the unattributed non-voter count
+  camp: DATA.default_camp,
+  potTarget: 'camp',
   q: '',
   turnoutMin: 0,
   turnoutMax: 100,
@@ -136,7 +166,7 @@ const SORTS = {
   turnout_asc: (a, b) => a.turnout - b.turnout,
   voters_desc: (a, b) => b.voters - a.voters,
   coal_desc: (a, b) => share(b.coalition, b.valid) - share(a.coalition, a.valid),
-  opp_desc: (a, b) => share(b.opposition, b.valid) - share(a.opposition, a.valid),
+  camp_desc: (a, b) => share(campVotes(b), b.valid) - share(campVotes(a), a.valid),
 };
 
 // ---------------------------------------------------------------- map
@@ -166,7 +196,7 @@ function tipHtml(s) {
   return `<b>${esc(s.name)}</b>
     <div class="r"><span>${esc(addressOf(s))}</span></div>
     <div class="r"><span>הצבעה ${pct(s.turnout)}</span><span>${signed(deltaNat(s))} מהארצי</span><span>${s.n_kalpi} קלפיות</span></div>
-    <div class="r"><span>${POT_LABEL[state.potTarget]}: ${num(potValue(s))}</span><span>מתוך ${num(s.eligible)} בעלי זכות</span></div>
+    <div class="r"><span>${potLabel()}: ${num(potValue(s))}</span><span>מתוך ${num(s.eligible)} בעלי זכות</span></div>
     <div class="lead"><span class="dot" style="background:${blocColor(s.lead)}"></span>
       <span>מוביל: ${BLOC_LABEL[s.lead]} · ${pct(share(s[s.lead], s.valid))}</span></div>`;
 }
@@ -179,7 +209,7 @@ function cardHtml(s) {
   return `<div class="mcard">
     <b>${esc(s.name)}</b>
     <div class="ad">${esc(addressOf(s))} · ${s.n_kalpi} קלפיות</div>
-    <div class="row"><span>${POT_LABEL[state.potTarget]}</span><span class="v">${num(potValue(s))}</span></div>
+    <div class="row"><span>${potLabel()}</span><span class="v">${num(potValue(s))}</span></div>
     <div class="row"><span>אחוז הצבעה</span><span class="v">${pct(s.turnout)}
       <span class="muted" style="font-weight:400">${signed(deltaNat(s))} מהארצי</span></span></div>
     <div class="row"><span>גוש מוביל</span><span class="v">
@@ -283,8 +313,10 @@ map.on('moveend zoomend', () => { if (state.labels) updateLabels(); });
 // ---------------------------------------------------------------- header stats
 function renderStats() {
   const c = DATA.city;
-  // first three ride along on mobile; the rest wait behind "עוד"
+  // first three ride along on mobile; the rest wait behind "עוד". The camp's own
+  // potential leads: it is the number this map exists to hand a campaign.
   const tiles = [
+    [`פוטנציאל ${campShort()}`, num(cityPot())],
     ['קולות שלא הגיעו', num(c.non_voters)],
     ['אחוז הצבעה', pct(c.turnout)],
     ['פער מהארצי', signed(c.turnout - c.national_turnout)],
@@ -320,15 +352,16 @@ function renderLegend() {
       <p class="legend-note">הבסיס הוא אחוז ההצבעה הארצי בבחירות אלה (${pct(NAT)}), לא ממוצע העיר
          (${pct(DATA.city.turnout)}). ${n} מתוך ${vis.length} אתרים בתצוגה מגיעים לממוצע הארצי.</p>` + sizeLegend();
   } else if (state.mode === 'potential') {
-    const b = POT_BINS[state.potTarget], vars = POT_VARS[state.potTarget];
+    const b = POT_BINS[potKey()], vars = POT_VARS[potKey()];
     const total = vis.reduce((a, x) => a + potValue(x), 0);
-    el.innerHTML = `<h3>${POT_LABEL[state.potTarget]}</h3>
+    el.innerHTML = `<h3>${potLabel()}</h3>
       <div class="ramp">${vars.map(v => `<span style="background:${cssVar(v)}"></span>`).join('')}</div>
       <div class="ramp-labels"><span>עד ${num(b[0])}</span><span>${num(b[1])}</span><span>${num(b[b.length - 1])}+</span></div>
       <p class="legend-note">סמן גדול וכהה = ציבור בוחרים גדול שהרבה ממנו לא הגיע לקלפי
          (שטח = בעלי זכות, צבע = הפוטנציאל). סה״כ ${num(total)} קולות ב-${vis.length} האתרים שבתצוגה.
-         ${state.potTarget === 'none' ? 'מספר בעלי זכות הבחירה שלא הצביעו.'
-           : 'הערכה: בעלי זכות שלא הצביעו × שיעור הגוש בקולות שכן נספרו באתר.'}</p>` + sizeLegend();
+         ${potKey() === 'none' ? 'מספר בעלי זכות הבחירה שלא הצביעו.'
+           : `הערכה: בעלי זכות שלא הצביעו × שיעור ${state.potTarget === 'camp' ? campName() : 'הגוש'} בקולות שכן נספרו באתר.`}
+         ${state.potTarget === 'camp' && campNote() ? esc(campNote()) + '.' : ''}</p>` + sizeLegend();
   } else {
     el.innerHTML = `<h3>פער בין הגושים (2022)</h3>
       <div class="ramp">${MARGIN_VARS.map(v => `<span style="background:${cssVar(v)}"></span>`).join('')}</div>
@@ -354,7 +387,7 @@ function renderList() {
         <span class="nm">${esc(s.name)}</span>
         <span class="pill" style="margin-inline-start:auto">${s.n_kalpi} קלפיות</span></div>
       <div class="ad">${esc(addressOf(s))}</div>
-      <div class="m"><span><b>${num(potValue(s))}</b> ${POT_LABEL[state.potTarget]}</span>
+      <div class="m"><span><b>${num(potValue(s))}</b> ${potLabel()}</span>
         <span>הצבעה ${pct(s.turnout)}</span><span>${signed(deltaNat(s))} מהארצי</span></div>
     </button>`).join('');
   $$('.site', el).forEach(b => b.addEventListener('click', () => selectSite(+b.dataset.id, true)));
@@ -368,6 +401,34 @@ function blocStack(o) {
     `<span style="width:${(100 * v / t).toFixed(2)}%;background:${blocColor(k)}" title="${BLOC_LABEL[k]}"></span>`).join('')}</div>
     <div class="stack-key">${parts.map(([k, v]) =>
       `<span class="i"><span class="dot" style="background:${blocColor(k)}"></span><span class="lbl">${BLOC_LABEL[k]}</span><span class="pc">${pct(share(v, t))}</span><span class="abs">${num(v)}</span></span>`).join('')}</div>`;
+}
+
+// The three blocs partition the vote, so they are always the bars. A camp that is
+// not one of them (הדמוקרטים, inside the opposition) is appended as a fourth bar
+// and says so in its label — it overlaps the bar above it and must not read as a
+// fourth slice of the same pie. Bar widths stay scaled to the largest BLOC, so the
+// camp's bar is visibly the part of the opposition's that it is.
+const potBarKeys = () => ['coalition', 'opposition', 'other'].concat(BLOC_VAR[state.camp] ? [] : [state.camp]);
+const campInside = (c = state.camp) => BLOC_LABEL[CAMPS[c].inside] || '';
+// The label stays the bare name — spelling the overlap out on every bar wrapped it to
+// three lines. The sentence under the bars carries it once, for the one bar that needs it.
+const potBarLabel = b => BLOC_LABEL[b] || campName(b);
+const campOverlapNote = () => (BLOC_VAR[state.camp] ? ''
+  : ` ${campName()} נכללים גם בשורת ${campInside()} שמעליהם, ולכן הסכום כאן גדול ממספר מי שלא הצביעו.`);
+const potBarColor = b => (BLOC_VAR[b] ? blocColor(b) : campColor(b));
+
+// The stack above shows the partition; a camp inside one of its slices needs its own
+// line, or its number is nowhere in the site card. Only shown for a camp that is not
+// itself a bloc — for אופוזיציה רחבה the stack already says it.
+function campLine(s) {
+  if (BLOC_VAR[state.camp]) return '';
+  const v = campVotes(s);
+  return `<div class="stack-key" style="margin-top:6px">
+    <span class="i"><span class="dot" style="background:${campColor()}"></span>
+      <span class="lbl">${campName()}</span><span class="pc">${pct(share(v, s.valid))}</span>
+      <span class="abs">${num(v)}</span></span></div>
+    <p class="legend-note" style="margin:4px 0 0">${esc(campNote())} — הקולות כלולים גם בשורת ${campInside()} שלמעלה.
+       פוטנציאל באתר: <b>${num(s.pot[state.camp])}</b> קולות.</p>`;
 }
 
 function renderDetail(s) {
@@ -396,17 +457,17 @@ function renderDetail(s) {
       </div>
       <div class="sec" style="padding:10px 0 0; border:0">
         <h4>פוטנציאל לפי גוש — הערכה</h4>
-        <div class="bars">${['coalition', 'opposition', 'other'].map(b => `
-          <div class="bar"><span>${BLOC_LABEL[b]}</span>
-            <span class="track"><span class="fill" style="width:${(100 * s.pot[b] / Math.max(...Object.values(s.pot), 1)).toFixed(1)}%;background:${blocColor(b)}"></span></span>
+        <div class="bars">${potBarKeys().map(b => `
+          <div class="bar"><span>${potBarLabel(b)}</span>
+            <span class="track"><span class="fill" style="width:${(100 * s.pot[b] / Math.max(s.pot.coalition, s.pot.opposition, s.pot.other, 1)).toFixed(1)}%;background:${potBarColor(b)}"></span></span>
             <span class="val">${num(s.pot[b])} קולות</span></div>`).join('')}</div>
         <p class="legend-note">${num(s.non_voters)} בעלי זכות לא הצביעו כאן. החלוקה לגושים מניחה
-           שהם היו מצביעים כמו מי שכן הצביע באתר — הערכה, לא תחזית.</p>
+           שהם היו מצביעים כמו מי שכן הצביע באתר — הערכה, לא תחזית.${campOverlapNote()}</p>
       </div>
       <span class="warn">📍 ${geoNote}${s.jittered ? ' · הוזז מעט כדי להפריד סמנים חופפים' : ''}</span>
     </div>
     <div class="scroll">
-      <div class="sec"><h4>חלוקה לגושים</h4>${blocStack(s)}</div>
+      <div class="sec"><h4>חלוקה לגושים</h4>${blocStack(s)}${campLine(s)}</div>
       <div class="sec"><h4>המפלגות הגדולות באתר</h4>
         <div class="bars">${s.top_parties.map(([k, v]) => `
           <div class="bar"><span>${esc(partyName(k))}</span>
@@ -504,6 +565,22 @@ function renderAbout() {
       <li><b>אופוזיציה רחבה</b>: ${names('zionist_opp')}; ${names('arab')}</li>
       <li><b>רשימות אחרות</b>: כל שאר הרשימות שקיבלו קולות בעיר.</li>
     </ul>
+    <h3>המחנה שלי — ומה זה אומר על ${esc(campName())}</h3>
+    <p>"המחנה שלי" הוא מי שהמפה סופרת עבורו: הוא קובע את הפוטנציאל שנצבע על המפה, את המספר
+       שברשימה, את המיון ואת עמודות הטבלה. אפשר לבחור בין
+       ${CAMP_KEYS.map(c => `<b>${esc(CAMPS[c].name)}</b>`).join(' לבין ')}, וברירת המחדל היא
+       <b>${esc(campName(DATA.default_camp))}</b>.</p>
+    ${CAMP_KEYS.filter(c => CAMPS[c].parties).map(c => {
+      const v = campVotes(DATA.city, c);
+      return `<p><b>${esc(CAMPS[c].name)}</b> כאן הם סכום הקולות של
+        ${CAMPS[c].parties.map(k => `${partyName(k)} (${k})`).join(' ו')}:
+        ${num(v)} קולות בחיפה, ${pct(share(v, DATA.city.valid))} מהקולות הכשרים,
+        ופוטנציאל של ${num(cityPot(c))} קולות נוספים (סכום הפוטנציאל של 140 האתרים).</p>
+      <p class="muted"><b>שימו לב:</b> ${esc(campNoteLong(c))} — כלומר הסכום כאן הוא בנייה בדיעבד
+         של המחנה, לא רשימה שהופיעה על פתק ההצבעה.
+         הקולות האלה כלולים גם ב"${esc(campInside(c))}", ולכן הגושים במפה ממשיכים לחלק את הקולות
+         ביניהם בלי המחנה: הוא מוצג לצידם, לא במקומם.</p>`;
+    }).join('')}
     <p>השיעורים מחושבים מתוך הקולות הכשרים. "פער בין הגושים" הוא שיעור קואליציית 2022 פחות שיעור האופוזיציה הרחבה.</p>
     <h3>מגבלות</h3>
     <ul>
@@ -527,12 +604,14 @@ const SITE_COLS = [
   ['dnat', 'פער מהארצי', s => signed(deltaNat(s)), s => deltaNat(s)],
   ['dcity', 'פער מחיפה', s => signed(deltaCity(s)), s => deltaCity(s)],
   ['nonv', 'לא הצביעו', s => num(s.non_voters), s => s.non_voters],
+  ['potcamp', () => `פוטנציאל ${campName()}`, s => num(s.pot[state.camp]), s => s.pot[state.camp]],
   ['potc', 'פוטנציאל קואליציה', s => num(s.pot.coalition), s => s.pot.coalition],
   ['poto', 'פוטנציאל אופוזיציה', s => num(s.pot.opposition), s => s.pot.opposition],
   ['valid', 'כשרים', s => num(s.valid), s => s.valid],
   ['invalid', 'פסולים', s => num(s.invalid), s => s.invalid],
   ['coal', 'קואליציית 2022', s => pct(share(s.coalition, s.valid)), s => share(s.coalition, s.valid)],
   ['opp', 'אופוזיציה רחבה', s => pct(share(s.opposition, s.valid)), s => share(s.opposition, s.valid)],
+  ['campshare', () => campName(), s => pct(share(campVotes(s), s.valid)), s => share(campVotes(s), s.valid)],
   ['oth', 'רשימות אחרות', s => pct(share(s.other, s.valid)), s => share(s.other, s.valid)],
   ['lead', 'גוש מוביל', s => `<span class="dot" style="background:${blocColor(s.lead)};display:inline-block"></span> ${BLOC_LABEL[s.lead]}`, s => s.lead],
   ['lat', 'קו רוחב', s => s.lat?.toFixed(5) ?? '—', s => s.lat ?? 0],
@@ -552,23 +631,31 @@ const KALPI_COLS = [
   ['invalid', 'פסולים', k => num(k.invalid), k => k.invalid],
   ['coal', 'קואליציית 2022', k => pct(share(k.coalition, k.valid)), k => share(k.coalition, k.valid)],
   ['opp', 'אופוזיציה רחבה', k => pct(share(k.opposition, k.valid)), k => share(k.opposition, k.valid)],
+  ['campshare', () => campName(), k => pct(share(campVotes(k), k.valid)), k => share(campVotes(k), k.valid)],
   ['lead', 'גוש מוביל', k => `<span class="dot" style="background:${blocColor(k.lead)};display:inline-block"></span> ${BLOC_LABEL[k.lead]}`, k => k.lead],
 ];
 // A 15-column nowrap table is unreadable on a phone; keep the columns that carry
-// the story and let the full set come back on a wider screen.
-const MOBILE_KEYS = ['name', 'turnout', 'dnat', 'nonv', 'potc', 'poto'];
+// the story and let the full set come back on a wider screen. The camp's own
+// potential takes the slot the opposition's had — that is the column the reader
+// picked a camp to see.
+const MOBILE_KEYS = ['name', 'turnout', 'dnat', 'nonv', 'potc', 'potcamp'];
+// The camp columns are duplicates when the camp IS a bloc (אופוזיציה רחבה already
+// has its own two), so they are dropped in that case rather than printed twice.
+const tableCols = cols => cols.filter(c => !(c[0].startsWith('camp') || c[0] === 'potcamp') || !BLOC_VAR[state.camp])
+  .map(c => (typeof c[1] === 'function' ? [c[0], c[1](), c[2], c[3]] : c));
 const isNarrow = () => matchMedia('(max-width:1000px)').matches;
 
 function renderTable() {
   const site = state.tableLevel === 'site';
-  let cols = site ? SITE_COLS : KALPI_COLS;
+  const allCols = tableCols(site ? SITE_COLS : KALPI_COLS);
+  let cols = allCols;
   if (isNarrow()) {
-    const sub = cols.filter(c => MOBILE_KEYS.includes(c[0]));
+    const keys = MOBILE_KEYS.map(k => (k === 'potcamp' && BLOC_VAR[state.camp] ? 'poto' : k));
+    const sub = cols.filter(c => keys.includes(c[0]));
     if (sub.length) cols = sub;
   }
   const visIds = new Set(visible().map(s => s.id));
   let rows = site ? visible() : kalpiRows.filter(k => visIds.has(k.siteId));
-  const allCols = site ? SITE_COLS : KALPI_COLS;
   const col = allCols.find(c => c[0] === state.tableSort.key) || cols[0];
   rows = [...rows].sort((a, b) => {
     const x = col[3](a), y = col[3](b);
@@ -606,6 +693,25 @@ function setPotTarget(t) {
   $('#mapPotTarget').value = t;
   renderAll();
 }
+// The camp is the one control that repoints the whole map: the potential target
+// named "המחנה שלי", the list figure, the camp sort, the camp table columns, the
+// header tile and the site card all read state.camp, so they all move together and
+// nothing has to be re-picked after switching.
+function setCamp(c) {
+  state.camp = c;
+  $('#camp').value = c;
+  $('#campNote').textContent = campNote();
+  // the two target selects and the sort name the camp rather than repeating the list
+  $$('#potTarget option[value="camp"], #mapPotTarget option[value="camp"]')
+    .forEach(o => { o.textContent = campName(); });
+  $('#sort option[value="camp_desc"]').textContent = `שיעור ${campName()}`;
+  renderStats();
+  renderAll();
+  if (state.selected != null) renderDetail(sites.find(s => s.id === state.selected));
+}
+$('#camp').innerHTML = CAMP_KEYS.map(c =>
+  `<option value="${c}">${esc(CAMPS[c].name)}</option>`).join('');
+$('#camp').addEventListener('change', e => setCamp(e.target.value));
 $('#modeSeg').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   setMode(b.dataset.mode);
@@ -733,6 +839,10 @@ function fitAll() {
 setTiles();
 renderStats();
 buildMarkers();
+// the controls start on whatever `state` declares above, not on whatever option the
+// markup happens to list first
+setPotTarget(state.potTarget);
+setCamp(state.camp);
 renderLegend();
 renderList();
 fitAll();

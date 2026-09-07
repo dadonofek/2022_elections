@@ -5,7 +5,7 @@ To build the map for a DIFFERENT CITY (same election): copy this repo, drop in
 that city's station<->address matching workbook, and edit the "city identity",
 "inputs / outputs" and "bounding box" sections below. Nothing else should change.
 
-To build for a DIFFERENT ELECTION: also update BLOCS and PARTY_NAMES.
+To build for a DIFFERENT ELECTION: also update BLOCS, CAMPS and PARTY_NAMES.
 
 Every pipeline script imports from here — there are no other hard-coded city
 constants.
@@ -47,6 +47,33 @@ BLOCS = {
     'zionist_opp': ['פה', 'כן', 'ל', 'אמת', 'מרצ'],
     'arab':        ['ום', 'עם', 'ד'],
 }
+
+# --------------------------------------------- camps (whose votes the map counts)
+# A CAMP is the group the reader is counting FOR — it drives the potential metric,
+# the list, the sort and the table. It is deliberately NOT part of the bloc
+# partition above: הדמוקרטים is a subset of the broad opposition (העבודה and מרצ ran
+# as two separate lists in this election and merged into one party only in 2024), so
+# it is carried as its own total ALONGSIDE the blocs, never instead of one.
+#
+#   'parties' — letter codes to sum. A camp WITHOUT it reuses the bloc total that
+#               already carries its key (that is how 'opposition' works).
+#   'inside'  — the bloc key this camp overlaps, so the UI can say which slice of the
+#               partition it is part of.
+#   'note'    — the one-line caveat, shown under the select, in the potential legend
+#               and in the site card. Keep it SHORT: the legend box shares a phone
+#               screen with the map.
+#   'note_long' — the full version, shown only in the "על הנתונים" panel.
+#   'short'   — optional, for the header tile, whose label may not wrap: a name long
+#               enough to clip there is unreadable on a phone.
+CAMPS = {
+    'dem': {'name': 'הדמוקרטים', 'parties': ['אמת', 'מרצ'], 'inside': 'opposition',
+            'note': 'העבודה ומרצ, שהתאחדו למפלגה אחת ב-2024',
+            'note_long': 'העבודה ומרצ רצו ב-2022 כשתי רשימות נפרדות, ומרצ לא עברה את '
+                         'אחוז החסימה; הן התאחדו למפלגה אחת ב-2024'},
+    'opposition': {'name': 'אופוזיציה רחבה', 'short': 'אופוזיציה'},
+}
+DEFAULT_CAMP = 'dem'
+
 PARTY_NAMES = {
     'מחל': 'הליכוד', 'שס': 'ש"ס', 'ג': 'יהדות התורה', 'ט': 'הציונות הדתית',
     'פה': 'יש עתיד', 'כן': 'המחנה הממלכתי', 'ל': 'ישראל ביתנו', 'אמת': 'העבודה',

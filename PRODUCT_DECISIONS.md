@@ -324,3 +324,117 @@ scale, one size legend, `700 / 1,600 / 3,500` בעלי זכות in every mode.
 **Regression check:** `radiusModeIndependent` evaluates `radiusOf()` for the same site
 under all five modes and asserts the radius does not move — run on every scenario, not
 just the potential ones.
+
+---
+
+# Round 4 — the map picks a side: הדמוקרטים
+
+**Asked:** *"I want to specifically support הדמוקרטים. I want a selector
+אופוזיציה / הדמוקרטים (default הדמוקרטים), and when it is set, potential and everything
+else should point to הדמוקרטים (קולות של העבודה ומרצ)."*
+
+**Decided: build it as a `camp`, not as a fourth bloc — and let it repoint the map.**
+
+## 4.1 Why a camp and not a bloc
+
+הדמוקרטים is **inside** the broad opposition, not beside it. The three blocs partition the
+valid vote (`coalition + opposition + other = valid`) and everything built on that
+partition — the bloc split, `גוש מוביל`, `פער בין הגושים`, the filter chips — stays true
+only while it is a partition. אמת (6,654) + מרצ (6,417) = **13,071 votes, 9.35% of Haifa's
+valid vote**, and every one of them is already counted inside the opposition's 88,413.
+
+So the camp is carried **alongside** the blocs, never instead of one:
+
+| stays on the blocs | follows the camp |
+|---|---|
+| bloc split stack, `גוש מוביל`, `פער בין הגושים`, filter chips | potential (colour + bins + legend), the list's headline figure, the `שיעור המחנה שלי` sort, the header's first tile, the table's camp columns, the marker tooltip and the phone card |
+
+Everywhere the camp appears next to the partition — the site card's bloc split and the
+potential bars — it is **labelled as a subset** (`הדמוקרטים — מתוך האופוזיציה`) and its bar
+is scaled against the blocs, so it can never be read as a fourth slice of the same pie.
+
+## 4.2 One selector, not one option per camp
+
+The `הגוש שלי` select already picked whose non-voters to count. Adding `הדמוקרטים` as a
+fifth option would have made the potential point at it and **nothing else** — the sort, the
+table columns and the header tile would still have said "opposition".
+
+Instead there are now two controls with different jobs:
+
+- **`המחנה שלי`** — `הדמוקרטים` / `אופוזיציה רחבה`, **defaulting to הדמוקרטים**. It is the
+  map's subject, and it drives every surface in the right-hand column above.
+- **`למי לשייך את הקולות שלא הגיעו`** — unchanged, except that its opposition option is now
+  `המחנה שלי`, which *resolves* to whichever camp is selected. Picking a camp never costs
+  the reader a second pick, and there is exactly one place to change the subject.
+
+**The camp select stays in the panel, and does not join the map bar.** Round 3 put the
+colour mode on the map because it is flipped constantly and the panel is on the other tab
+below 1000px. The camp is the opposite kind of control — a subject you set once and leave —
+and the map bar has room for two selects beside its two buttons before it wraps into the
+map. What the map bar does carry is the camp's *name*, inside the target select, so a phone
+reader always sees which camp is painted even where they cannot change it.
+
+**The default target moved from `כל מי שלא הצביע` to the camp.** Round 1 defaulted to raw
+non-voters so "the map does not pick a side unless the reader does". This round the ask is
+precisely that the map picks a side; the neutral view is one option away and still the
+honest one, so it stays in the list rather than being the default.
+
+## 4.3 The camp is `config.py` data, not code
+
+`config.CAMPS` names each camp, its party letter codes and its caveat; `DEFAULT_CAMP` picks
+the one the map opens on. `build_data.py` totals it at station, site and city level and adds
+it to `pot`; the front end reads `DATA.camps` and builds the select from it. Another camp,
+or another election's camps, is a config edit — no JS change. A camp without `parties`
+(that is how `opposition` is defined) reuses the bloc total that already carries its key.
+
+## 4.4 The colour — measured, per §3
+
+הדמוקרטים sits inside the opposition, so it **cannot borrow the opposition's orange**: the
+map would say "opposition" while the legend said "הדמוקרטים", and the two are 6.8x apart in
+size. It needs a hue of its own, and blue, orange, green, purple and rose are all spoken for.
+
+**Chosen: teal, OKLCH hue 210.** Measured with the dataviz validator against the three bloc
+colours, worst CVD ΔE (min of protan/deutan) **15.9 / 12.6 / 10.0** vs coalition blue,
+opposition orange and other green at the deep end — better separation than the shipped rose
+ramp manages against the same three (3.5, on green). Both ramps pass every ordinal check in
+both themes: monotone lightness, adjacent ΔL ≥ 0.06, light end 2.19:1 on the light surface
+and 2.30:1 on the dark, single hue.
+
+```
+dem   light  #00bed5 #00a7bc #0090a2 #007a8a #006572
+dem   dark   #005d69 #007381 #00899a #00a1b5 #00b9cf
+```
+
+**One accepted failure, recorded so it is not "fixed" blind:** at hue 210 the sRGB gamut
+tops out at C ≈ 0.08, below the validator's 0.10 categorical chroma floor. Raising the
+chroma means moving the hue toward 240, which is coalition blue's neighbourhood — a left
+camp painted in the coalition's colour is the worse error. Every categorical use of the
+colour (the camp's dot, its bar) ships with its label beside it.
+
+**Its own bins.** The camp's per-site potential tops out at **364**, against 1,532 for the
+opposition. Reusing the opposition's `100 / 250 / 450 / 700` would paint 126 of 140 sites in
+the palest step. The camp scale is `50 / 100 / 175 / 260` — 64 / 43 / 22 / 8 / 3 sites per
+step, the same shape the other ramps have.
+
+## 4.5 The caveat, and where it lives
+
+הדמוקרטים **did not exist in November 2022**. העבודה and מרצ ran as two separate lists and
+מרצ did not clear the threshold; the party was formed from their merger in 2024. Summing
+them is a retrospective construct, and it is stated in three places: under the camp select,
+in the potential legend, and in `על הנתונים`, which also gives the city totals. Everything
+in Round 1's estimate caveat still applies on top of it.
+
+## 4.6 The header tile sums the sites
+
+The camp's header tile is the **sum of the 140 site potentials**, not `city.pot` — the
+city-level figure applies one city-wide vote share to all 112,642 non-voters, and comes out
+**10,534** against the sites' **10,142**. Both are defensible; only one of them agrees with
+the legend total sitting directly below it and with every number in the list. `build_data.py`
+still emits `city.pot` (it is in the build log), so this is written down: do not "simplify"
+the tile back to it.
+
+**Regression checks:** `light` asserts the map opens on the camp — its legend, its header
+tile, its list figure and its name inside the target and sort controls; `pot_opp` and
+`table_opp` assert switching to `אופוזיציה רחבה` moves all of them and drops the now
+duplicate table columns; `table` / `phone_table` assert the camp's columns and the phone
+subset spending one of its six slots on the camp rather than the bloc.

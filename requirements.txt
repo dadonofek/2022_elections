@@ -1,0 +1,6 @@
+# Data pipeline
+openpyxl==3.1.5        # reads the station<->address matching workbook (config.MATCHING_XLSX)
+
+# Rendering tests only (test_map.py) — skip if you just want to build the map.
+# After installing, run once:  python3 -m playwright install chromium
+playwright>=1.56

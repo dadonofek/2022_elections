@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הקלפיות של חיפה</title>
+<style>
+/* ---------- design tokens ---------- */
+:root{
+  color-scheme: light;
+  --surface-0:#f4f3f0; --surface-1:#fcfcfb; --surface-2:#eceae5;
+  --border:#dcd9d2; --border-strong:#bfbbb2;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#77756e;
+  --bloc-coalition:#2a78d6; --bloc-opposition:#eb6834; --bloc-other:#1baf7a;
+  --accent:#2a78d6; --accent-ink:#fff;
+  --ring:#fcfcfb;
+  --seq-0:#86b6ef; --seq-1:#5598e7; --seq-2:#2a78d6; --seq-3:#1c5cab; --seq-4:#124883; --seq-5:#0d366b;
+  --div-opp-3:#c94f1c; --div-opp-2:#ef8f5f; --div-opp-1:#f6c3a7;
+  --div-mid:#e6e4df;
+  --div-coal-1:#9ec5f4; --div-coal-2:#3987e5; --div-coal-3:#1c5cab;
+  --shadow:0 1px 2px rgba(0,0,0,.06),0 6px 20px rgba(0,0,0,.08);
+  --radius:10px;
+  --sidebar-w:380px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --surface-0:#121211; --surface-1:#1a1a19; --surface-2:#242423;
+    --border:#33332f; --border-strong:#4a4a45;
+    --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#94938a;
+    --bloc-coalition:#3987e5; --bloc-opposition:#d95926; --bloc-other:#199e70;
+    --accent:#3987e5; --accent-ink:#0b0b0b;
+    --ring:#1a1a19;
+    --seq-0:#184f95; --seq-1:#256abf; --seq-2:#3987e5; --seq-3:#6da7ec; --seq-4:#9ec5f4; --seq-5:#cde2fb;
+    --div-opp-3:#f0a077; --div-opp-2:#d95926; --div-opp-1:#8a4423;
+    --div-mid:#383835;
+    --div-coal-1:#1c5cab; --div-coal-2:#3987e5; --div-coal-3:#9ec5f4;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --surface-0:#121211; --surface-1:#1a1a19; --surface-2:#242423;
+  --border:#33332f; --border-strong:#4a4a45;
+  --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#94938a;
+  --bloc-coalition:#3987e5; --bloc-opposition:#d95926; --bloc-other:#199e70;
+  --accent:#3987e5; --accent-ink:#0b0b0b;
+  --ring:#1a1a19;
+  --seq-0:#184f95; --seq-1:#256abf; --seq-2:#3987e5; --seq-3:#6da7ec; --seq-4:#9ec5f4; --seq-5:#cde2fb;
+  --div-opp-3:#f0a077; --div-opp-2:#d95926; --div-opp-1:#8a4423;
+  --div-mid:#383835;
+  --div-coal-1:#1c5cab; --div-coal-2:#3987e5; --div-coal-3:#9ec5f4;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.5);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; direction:rtl;
+  font-family:"Assistant","Heebo","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  background:var(--surface-0); color:var(--text-primary);
+  font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased;
+}
+.app{display:flex; flex-direction:column; height:100vh; overflow:hidden}
+
+/* ---------- header ---------- */
+header{
+  display:flex; align-items:center; gap:20px; flex-wrap:wrap;
+  padding:10px 18px; background:var(--surface-1);
+  border-bottom:1px solid var(--border); z-index:20;
+}
+.brand h1{margin:0; font-size:17px; font-weight:700; letter-spacing:-.2px}
+.brand p{margin:1px 0 0; font-size:12px; color:var(--text-muted)}
+.stats{display:flex; gap:6px; margin-inline-start:auto; flex-wrap:wrap}
+.stat{
+  background:var(--surface-2); border:1px solid var(--border);
+  border-radius:var(--radius); padding:5px 11px; min-width:82px;
+}
+.stat .v{font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.2}
+.stat .k{font-size:11px; color:var(--text-muted)}
+.hdr-actions{display:flex; gap:6px}
+
+/* ---------- buttons ---------- */
+button{font:inherit; color:inherit; cursor:pointer}
+.btn{
+  background:var(--surface-1); border:1px solid var(--border-strong);
+  border-radius:8px; padding:6px 11px; font-size:13px;
+}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent); color:var(--accent-ink); border-color:transparent}
+.seg{display:flex; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:2px; gap:2px}
+.seg button{
+  flex:1; border:0; background:transparent; border-radius:7px;
+  padding:6px 8px; font-size:12.5px; color:var(--text-secondary); white-space:nowrap;
+}
+.seg button[aria-pressed="true"]{background:var(--surface-1); color:var(--text-primary); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.08)}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ---------- layout ---------- */
+.main{flex:1; display:flex; min-height:0; position:relative}
+/* the wrapper owns the overlays so they stay pinned to the map in every layout,
+   and isolates Leaflet's internal pane z-indexes from the page */
+.mapwrap{flex:1; min-width:0; position:relative; z-index:0; isolation:isolate}
+#map{position:absolute; inset:0; background:var(--surface-2)}
+.sidebar{
+  position:relative;                      /* the detail overlay is positioned against this */
+  width:var(--sidebar-w); flex:0 0 var(--sidebar-w);
+  background:var(--surface-1); border-inline-start:1px solid var(--border);
+  display:flex; flex-direction:column; min-height:0; z-index:10;
+}
+.panel{padding:12px 14px; border-bottom:1px solid var(--border)}
+.panel h2{margin:0 0 8px; font-size:12px; font-weight:700; color:var(--text-muted); letter-spacing:.4px}
+.scroll{overflow-y:auto; min-height:0; flex:1; scrollbar-width:thin}
+
+/* ---------- form controls ---------- */
+.field{margin-bottom:10px}
+.field:last-child{margin-bottom:0}
+label.lab{display:block; font-size:12px; color:var(--text-secondary); margin-bottom:4px}
+input[type=search],input[type=text],select{
+  width:100%; font:inherit; font-size:13px; padding:7px 9px;
+  border:1px solid var(--border-strong); border-radius:8px;
+  background:var(--surface-1); color:var(--text-primary);
+}
+input[type=range]{width:100%; accent-color:var(--accent)}
+.chips{display:flex; gap:5px; flex-wrap:wrap}
+.chip{
+  display:inline-flex; align-items:center; gap:6px; font-size:12.5px;
+  border:1px solid var(--border-strong); background:var(--surface-1);
+  border-radius:20px; padding:4px 10px; cursor:pointer; user-select:none;
+}
+.chip input{display:none}
+.chip .dot{width:9px; height:9px; border-radius:50%; flex:none}
+.chip[data-on="0"]{opacity:.42; text-decoration:line-through}
+.rangeval{font-variant-numeric:tabular-nums; color:var(--text-primary); font-weight:600}
+
+/* ---------- legend ---------- */
+.legend-row{display:flex; align-items:center; gap:8px; font-size:12.5px; margin-bottom:5px}
+.legend-row .sw{width:13px; height:13px; border-radius:4px; flex:none; box-shadow:0 0 0 1px rgba(11,11,11,.18)}
+.legend-row .n{margin-inline-start:auto; color:var(--text-muted); font-variant-numeric:tabular-nums; font-size:11.5px}
+.ramp{display:flex; height:11px; border-radius:4px; overflow:hidden; gap:2px; margin:4px 0 3px}
+.ramp span{flex:1; box-shadow:0 0 0 1px rgba(11,11,11,.12) inset}
+.ramp-labels{display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); font-variant-numeric:tabular-nums}
+.size-legend{display:flex; align-items:flex-end; gap:12px; margin-top:8px; padding-top:8px; border-top:1px solid var(--border)}
+.size-legend .b{display:flex; flex-direction:column; align-items:center; gap:3px; font-size:11px; color:var(--text-muted)}
+.size-legend i{display:block; border-radius:50%; background:transparent; border:1.5px solid var(--text-muted)}
+
+/* ---------- site list ---------- */
+.listhead{display:flex; align-items:center; gap:8px; padding:9px 14px; border-bottom:1px solid var(--border); font-size:12px; color:var(--text-muted)}
+.listhead select{width:auto; padding:4px 6px; font-size:12px; margin-inline-start:auto}
+.site{
+  display:block; width:100%; text-align:start; background:transparent;
+  border:0; border-bottom:1px solid var(--border); padding:9px 14px;
+}
+.site:hover{background:var(--surface-2)}
+.site[aria-current="true"]{background:var(--surface-2); box-shadow:inset 3px 0 0 var(--accent)}
+.site .t{display:flex; align-items:center; gap:7px}
+.site .nm{font-weight:600; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.site .ad{font-size:12px; color:var(--text-muted); margin-top:1px}
+.site .m{display:flex; gap:10px; font-size:11.5px; color:var(--text-secondary); margin-top:4px; font-variant-numeric:tabular-nums}
+.pill{font-size:11px; padding:1px 7px; border-radius:20px; border:1px solid var(--border-strong); color:var(--text-secondary); white-space:nowrap}
+.dot{width:9px; height:9px; border-radius:50%; flex:none; box-shadow:0 0 0 1px rgba(11,11,11,.22)}
+
+/* ---------- detail ---------- */
+.detail{position:absolute; inset:0; background:var(--surface-1); display:flex; flex-direction:column; z-index:5}
+.detail-head{padding:12px 14px; border-bottom:1px solid var(--border)}
+.detail-head .row{display:flex; align-items:flex-start; gap:8px}
+.detail-head h3{margin:0; font-size:15px; font-weight:700}
+.detail-head .ad{font-size:12.5px; color:var(--text-secondary); margin-top:2px}
+.kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:10px}
+.kpi{background:var(--surface-2); border-radius:8px; padding:6px 8px}
+.kpi .v{font-size:15px; font-weight:700; font-variant-numeric:tabular-nums}
+.kpi .k{font-size:11px; color:var(--text-muted)}
+.sec{padding:12px 14px; border-bottom:1px solid var(--border)}
+.sec h4{margin:0 0 8px; font-size:12px; color:var(--text-muted); font-weight:700; letter-spacing:.4px}
+details.sec > summary{margin:0; font-size:12px; color:var(--text-muted); font-weight:700; letter-spacing:.4px; cursor:pointer; list-style:none; user-select:none}
+details.sec > summary::-webkit-details-marker{display:none}
+details.sec > summary::before{content:"\25B8"; display:inline-block; margin-inline-end:6px}
+details.sec[open] > summary{margin-bottom:8px}
+details.sec[open] > summary::before{content:"\25BE"}
+.stack{display:flex; height:12px; border-radius:4px; overflow:hidden; gap:2px; background:var(--surface-2)}
+.stack > span{display:block; height:100%}
+.stack-key{display:flex; flex-direction:column; gap:5px; margin-top:8px; font-size:12.5px}
+.stack-key .i{display:flex; align-items:center; gap:7px}
+.stack-key .i .lbl{flex:1}
+.stack-key .i .pc{font-variant-numeric:tabular-nums; font-weight:700}
+.stack-key .i .abs{font-variant-numeric:tabular-nums; color:var(--text-muted); min-width:54px; text-align:end}
+.bars{display:flex; flex-direction:column; gap:6px}
+.bar{display:grid; grid-template-columns:96px 1fr 92px; align-items:center; gap:8px; font-size:12.5px}
+.bar .track{display:block; height:9px; background:var(--surface-2); border-radius:4px; overflow:hidden}
+.bar .fill{display:block; height:100%; border-radius:4px}
+.bar .val{text-align:end; white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--text-secondary)}
+table.kt{width:100%; border-collapse:collapse; font-size:12.5px; font-variant-numeric:tabular-nums}
+table.kt th{text-align:start; font-weight:600; color:var(--text-muted); font-size:11.5px; padding:4px 6px; border-bottom:1px solid var(--border)}
+table.kt td{padding:5px 6px; border-bottom:1px solid var(--border)}
+table.kt tbody tr:hover{background:var(--surface-2)}
+.muted{color:var(--text-muted)}
+.warn{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; color:var(--text-secondary); background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:3px 7px; margin-top:8px}
+
+/* ---------- map bits ---------- */
+.leaflet-container{font:inherit; background:var(--surface-2)}
+/* mute the basemap: keeps Hebrew street names legible while the data markers lead */
+#map .leaflet-tile-pane{filter:saturate(.2) brightness(1.08) contrast(.9); opacity:.92}
+#map.tiles-dark .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) saturate(.16) brightness(.88) contrast(.86); opacity:.9}
+.leaflet-popup-content-wrapper{border-radius:10px; box-shadow:var(--shadow)}
+.leaflet-tooltip.tip{
+  direction:rtl; text-align:start; background:var(--surface-1); color:var(--text-primary);
+  border:1px solid var(--border-strong); border-radius:9px; box-shadow:var(--shadow);
+  padding:7px 9px; font-size:12.5px; white-space:nowrap;
+}
+.leaflet-tooltip.tip::before{display:none}
+.tip b{display:block; font-size:13px; margin-bottom:2px}
+.tip .r{display:flex; gap:8px; color:var(--text-secondary); font-variant-numeric:tabular-nums}
+.tip .lead{display:flex; align-items:center; gap:5px; margin-top:3px}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .dot{box-shadow:0 0 0 1px rgba(255,255,255,.28)}
+  :root:not([data-theme="light"]) .legend-row .sw{box-shadow:0 0 0 1px rgba(255,255,255,.24)}
+  :root:not([data-theme="light"]) .ramp span{box-shadow:0 0 0 1px rgba(255,255,255,.16) inset}
+}
+:root[data-theme="dark"] .dot{box-shadow:0 0 0 1px rgba(255,255,255,.28)}
+:root[data-theme="dark"] .legend-row .sw{box-shadow:0 0 0 1px rgba(255,255,255,.24)}
+:root[data-theme="dark"] .ramp span{box-shadow:0 0 0 1px rgba(255,255,255,.16) inset}
+.leaflet-tooltip.lbl{
+  background:transparent; border:0; box-shadow:none; padding:0; color:var(--text-primary);
+  font-size:11.5px; font-weight:600; direction:rtl;
+  text-shadow:0 0 3px var(--ring),0 0 3px var(--ring),0 0 3px var(--ring),0 0 5px var(--ring);
+}
+.leaflet-tooltip.lbl::before{display:none}
+.mapbar{
+  position:absolute; top:10px; right:10px; z-index:600;
+  display:flex; gap:6px; align-items:center;
+}
+.mapbar .btn{box-shadow:var(--shadow)}
+.legendbox{
+  position:absolute; bottom:34px; inset-inline-start:10px; z-index:600;
+  background:var(--surface-1); border:1px solid var(--border); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:10px 12px; width:216px;
+}
+.legendbox h3{margin:0 0 7px; font-size:12px; color:var(--text-muted); font-weight:700}
+.leaflet-control-attribution{font-size:10px; direction:ltr; background:var(--surface-1); color:var(--text-secondary)}
+.leaflet-control-attribution a{color:var(--text-secondary)}
+.leaflet-bar a,.leaflet-bar a:hover{
+  background:var(--surface-1); color:var(--text-primary); border-bottom-color:var(--border);
+}
+.leaflet-bar a:hover{background:var(--surface-2)}
+.leaflet-bar{border:1px solid var(--border); box-shadow:var(--shadow)}
+.leaflet-control-scale-line{
+  background:color-mix(in srgb, var(--surface-1) 82%, transparent); color:var(--text-secondary);
+  border-color:var(--border-strong); border-top:none;
+}
+
+/* ---------- modal ---------- */
+.modal{position:absolute; inset:0; z-index:1100; display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.45); padding:24px}
+.modal-card{background:var(--surface-1); border:1px solid var(--border); border-radius:14px;
+  box-shadow:var(--shadow); width:min(700px,100%); max-height:100%; display:flex; flex-direction:column}
+.modal-head{display:flex; align-items:center; gap:12px; padding:14px 18px; border-bottom:1px solid var(--border)}
+.modal-head h2{margin:0; font-size:16px}
+.modal-head .btn{margin-inline-start:auto}
+.modal-body{overflow-y:auto; padding:16px 18px; font-size:13.5px; line-height:1.6}
+.modal-body h3{font-size:13px; color:var(--text-muted); margin:16px 0 6px; letter-spacing:.3px}
+.modal-body h3:first-child{margin-top:0}
+.modal-body ul{margin:0; padding-inline-start:20px}
+.modal-body li{margin-bottom:4px}
+.modal-body a{color:var(--accent)}
+.modal-body code{background:var(--surface-2); padding:1px 5px; border-radius:5px; font-size:12.5px; direction:ltr; display:inline-block}
+
+/* ---------- table view ---------- */
+.tableview{position:absolute; inset:0; background:var(--surface-0); z-index:1000; display:flex; flex-direction:column}
+.tv-head{display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid var(--border); background:var(--surface-1)}
+.tv-body{overflow:auto; flex:1}
+table.full{width:100%; border-collapse:collapse; font-size:12.5px; font-variant-numeric:tabular-nums; background:var(--surface-1)}
+table.full th{
+  position:sticky; top:0; background:var(--surface-2); z-index:2; text-align:start;
+  padding:8px 10px; font-size:11.5px; border-bottom:1px solid var(--border-strong); cursor:pointer; white-space:nowrap;
+}
+table.full th[aria-sort]{color:var(--accent)}
+table.full td{padding:6px 10px; border-bottom:1px solid var(--border); white-space:nowrap}
+table.full tbody tr:hover{background:var(--surface-2)}
+.hidden{display:none !important}
+.empty{padding:24px 14px; text-align:center; color:var(--text-muted); font-size:13px}
+
+@media (max-width:1000px){
+  :root{--sidebar-w:100%}
+  .main{flex-direction:column}
+  .mapwrap{height:52vh; flex:none}
+  .sidebar{flex:1; border-inline-start:0; border-top:1px solid var(--border)}
+  .stats{width:100%; margin-inline-start:0}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div class="brand">
+      <h1>מפת הקלפיות של חיפה — הבחירות לכנסת ה-25</h1>
+      <p>424 קלפיות ב-140 אתרי הצבעה · נובמבר 2022 · תוצאות רשמיות של ועדת הבחירות המרכזית</p>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="hdr-actions">
+      <button class="btn" id="btnAbout">על הנתונים</button>
+      <button class="btn" id="btnTable">טבלה</button>
+      <button class="btn" id="btnTheme" title="החלפת ערכת צבעים">מצב כהה</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="mapwrap">
+      <div id="map"></div>
+      <div class="mapbar">
+        <button class="btn" id="btnReset">מבט על כל העיר</button>
+        <button class="btn" id="btnLabels" aria-pressed="false">שמות אתרים</button>
+      </div>
+      <div class="legendbox" id="legend"></div>
+    </div>
+
+    <aside class="sidebar">
+      <div class="panel">
+        <h2>צביעת הסמנים</h2>
+        <div class="seg" id="modeSeg" role="group" aria-label="בחירת צביעה">
+          <button data-mode="lead" aria-pressed="false">גוש מוביל</button>
+          <button data-mode="turnout" aria-pressed="true">אחוז הצבעה</button>
+          <button data-mode="margin" aria-pressed="false">פער בין הגושים</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>סינון</h2>
+        <div class="field">
+          <input type="search" id="q" placeholder="חיפוש לפי שם אתר, כתובת או מספר קלפי" aria-label="חיפוש">
+        </div>
+        <div class="field">
+          <label class="lab" for="turnoutMin">אחוז הצבעה מינימלי: <span class="rangeval" id="turnoutVal">0%</span></label>
+          <input type="range" id="turnoutMin" min="0" max="90" step="1" value="0">
+        </div>
+        <div class="field">
+          <label class="lab">גוש מוביל באתר</label>
+          <div class="chips" id="blocChips"></div>
+        </div>
+      </div>
+
+      <div class="listhead">
+        <span id="count"></span>
+        <select id="sort" aria-label="מיון">
+          <option value="kalpi">לפי מספר קלפי</option>
+          <option value="turnout_desc">אחוז הצבעה — מהגבוה</option>
+          <option value="turnout_asc">אחוז הצבעה — מהנמוך</option>
+          <option value="voters_desc">מספר מצביעים</option>
+          <option value="coal_desc">שיעור קואליציה 2022</option>
+          <option value="opp_desc">שיעור אופוזיציה רחבה</option>
+        </select>
+      </div>
+      <div class="scroll" id="list"></div>
+
+      <div class="detail hidden" id="detail"></div>
+    </aside>
+  </div>
+
+  <div class="modal hidden" id="about" role="dialog" aria-modal="true" aria-label="על הנתונים">
+    <div class="modal-card">
+      <div class="modal-head"><h2 id="aboutTitle">על הנתונים ועל שיטת העבודה</h2>
+        <button class="btn" id="btnCloseAbout">סגירה</button></div>
+      <div class="modal-body" id="aboutBody"></div>
+    </div>
+  </div>
+
+  <div class="tableview hidden" id="tableview">
+    <div class="tv-head">
+      <strong>טבלת נתונים מלאה</strong>
+      <div class="seg" id="tvSeg" style="width:280px">
+        <button data-level="site" aria-pressed="true">לפי אתר הצבעה (140)</button>
+        <button data-level="kalpi" aria-pressed="false">לפי קלפי (424)</button>
+      </div>
+      <span class="muted" id="tvCount"></span>
+      <button class="btn" id="btnCloseTable" style="margin-inline-start:auto">סגירה</button>
+    </div>
+    <div class="tv-body" id="tvBody"></div>
+  </div>
+</div>
+
+<script>/*__LEAFLET_JS__*/</script>
+<script>
+const DATA = /*__DATA__*/;
+/*__APP_JS__*/
+</script>
+</body>
+</html>

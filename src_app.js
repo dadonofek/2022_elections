@@ -23,6 +23,14 @@ const blocColor = b => cssVar(BLOC_VAR[b] || '--text-muted');
 // split / lead / margin keep using the blocs alone. It is always present: its own
 // option in the potential-target select, its own header tile, sort, table columns and
 // bar. Defined in config.py, so another election's camps need no change here.
+// The city is data, not a literal: every string that names it is built from
+// DATA.city.name so the same front end serves any city in config.CITIES.
+// Both prefixes are single letters glued to a noun, which is how Hebrew forms
+// "in <city>" and "from <city>" for the names in play (בחיפה, מחיפה, בבית שמש).
+const CITY = DATA.city.name;
+const IN_CITY = 'ב' + CITY;
+const FROM_CITY = 'מ' + CITY;
+
 const CAMPS = DATA.camps;
 const CAMP_KEYS = Object.keys(CAMPS);
 const isCamp = k => !!CAMPS[k];
@@ -434,7 +442,7 @@ function renderDetail(s) {
       <div class="row">
         <div style="min-width:0">
           <h3>${esc(s.name)}</h3>
-          <div class="ad">${esc(addressOf(s))}, חיפה · קלפיות ${s.kalpiot.map(k => esc(k.kalpi)).join(', ')}</div>
+          <div class="ad">${esc(addressOf(s))}, ${esc(CITY)} · קלפיות ${s.kalpiot.map(k => esc(k.kalpi)).join(', ')}</div>
         </div>
         <button class="btn" id="closeDetail" style="margin-inline-start:auto">חזרה</button>
       </div>
@@ -444,7 +452,7 @@ function renderDetail(s) {
         <div class="kpi"><div class="v">${num(s.eligible)}</div><div class="k">בעלי זכות</div></div>
         <div class="kpi"><div class="v">${num(s.non_voters)}</div><div class="k">לא הצביעו</div></div>
         <div class="kpi"><div class="v">${signed(deltaNat(s))}</div><div class="k">מהארצי ${pct(NAT)}</div></div>
-        <div class="kpi"><div class="v">${signed(deltaCity(s))}</div><div class="k">מחיפה ${pct(DATA.city.turnout)}</div></div>
+        <div class="kpi"><div class="v">${signed(deltaCity(s))}</div><div class="k">${esc(FROM_CITY)} ${pct(DATA.city.turnout)}</div></div>
       </div>
       <div class="sec" style="padding:10px 0 0; border:0">
         <h4>פוטנציאל לפי גוש — הערכה</h4>
@@ -513,7 +521,7 @@ function renderAbout() {
   const names = b => DATA.blocs[b].map(k => `${partyName(k)} (${k})`).join(', ');
   $('#aboutBody').innerHTML = `
     <h3>מה מוצג כאן</h3>
-    <p>כל סמן הוא <b>אתר הצבעה</b> אחד בחיפה בבחירות לכנסת ה-25 (1 בנובמבר 2022).
+    <p>כל סמן הוא <b>אתר הצבעה</b> אחד ${esc(IN_CITY)} בבחירות לכנסת ה-25 (1 בנובמבר 2022).
        ב-${num(c.n_sites)} האתרים פעלו ${num(c.n_kalpi)} קלפיות; אתר שבו כמה קלפיות מוצג כסמן אחד,
        והפירוט לפי קלפי נפתח בלחיצה עליו וכן בטבלה.</p>
     <p><b>שטח</b> הסמן פרופורציוני למספר <b>בעלי זכות הבחירה</b> באתר (לא למספר המצביעים
@@ -530,17 +538,16 @@ function renderAbout() {
        כולל גם מי שרשומים בעיר אך אינם גרים בה בפועל, ולכן חלק מ"מי שלא הצביע" אינו בר-השגה כלל.
        המספר הוא <b>חסם עליון</b> על הקולות שניתן היה להוסיף, לא הצפי להם.</p>
     <h3>פער מהארצי — למה זה הבסיס</h3>
-    <p>אחוז ההצבעה בחיפה, ${pct(c.turnout)}, נראה נמוך — אבל מול <b>ממוצע העיר עצמה</b> מחצית האתרים
+    <p>אחוז ההצבעה ${esc(IN_CITY)}, ${pct(c.turnout)}, נראה נמוך — אבל מול <b>ממוצע העיר עצמה</b> מחצית האתרים
        גבוהים ממנו מעצם ההגדרה, וכל צבע מתכנס לאפס. לכן הבסיס במפה הוא <b>אחוז ההצבעה הארצי</b>
        באותן בחירות, ${pct(c.national_turnout)}: מולו ${sites.filter(x => x.turnout < c.national_turnout).length}
-       מתוך ${sites.length} האתרים בחיפה נמצאים מתחת לממוצע, והפער הוא הסיפור.
+       מתוך ${sites.length} האתרים ${esc(IN_CITY)} נמצאים מתחת לממוצע, והפער הוא הסיפור.
        הפער מממוצע העיר מוצג גם הוא, בכרטיס של כל אתר ובטבלה.</p>
     <h3>מקורות</h3>
     <ul>
       <li>תוצאות, בעלי זכות בחירה ומצביעים לכל קלפי — הקובץ הרשמי של ועדת הבחירות המרכזית
           (<code>expb.csv</code>, כנסת ה-25). כל ${num(c.n_kalpi)} השורות הושוו לקובץ המקורי ונמצאו זהות.</li>
-      <li>שיוך כתובת לכל קלפי — קובץ ההתאמות <code>haifa_polling_station_matching.xlsx</code>
-          המבוסס בעיקר על הודעת הבחירות הרשמית של עיריית חיפה ועל שם אתר הקלפי.</li>
+      <li>שיוך כתובת לכל קלפי — ${DATA.city.source_note}.</li>
       <li>קואורדינטות — גאוקודינג של ${Object.values(byPrec).reduce((a, b) => a + b, 0)} האתרים מול
           OpenStreetMap (Nominatim), ובמקרים שבהם זוהה המבנה בשמו — מיקום המבנה עצמו (Overpass).</li>
     </ul>
@@ -563,8 +570,8 @@ function renderAbout() {
       const v = DATA.city[c];
       return `<p><b>${esc(campName(c))}</b> כאן הם סכום הקולות של
         ${CAMPS[c].parties.map(k => `${partyName(k)} (${k})`).join(' ו')}:
-        ${num(v)} קולות בחיפה, ${pct(share(v, DATA.city.valid))} מהקולות הכשרים,
-        ופוטנציאל של ${num(cityPot(c))} קולות נוספים (סכום הפוטנציאל של 140 האתרים).</p>
+        ${num(v)} קולות ${esc(IN_CITY)}, ${pct(share(v, DATA.city.valid))} מהקולות הכשרים,
+        ופוטנציאל של ${num(cityPot(c))} קולות נוספים (סכום הפוטנציאל של ${num(DATA.city.n_sites)} האתרים).</p>
       <p class="muted"><b>שימו לב:</b> ${esc(campNoteLong(c))} — כלומר הסכום כאן הוא בנייה בדיעבד,
          לא רשימה שהופיעה על פתק ההצבעה.
          הקולות האלה כלולים גם ב"${esc(campInside(c))}", ולכן הגושים במפה ממשיכים לחלק את הקולות
@@ -573,10 +580,11 @@ function renderAbout() {
     <p>השיעורים מחושבים מתוך הקולות הכשרים. "פער בין הגושים" הוא שיעור קואליציית 2022 פחות שיעור האופוזיציה הרחבה.</p>
     <h3>מגבלות</h3>
     <ul>
-      <li>הנתונים הם של קלפיות חיפה בלבד; מעטפות כפולות וקלפיות חיצוניות אינן נכללות,
+      <li>הנתונים הם של קלפיות ${esc(CITY)} בלבד; מעטפות כפולות וקלפיות חיצוניות אינן נכללות,
           ולכן אחוז ההצבעה כאן (${pct(c.turnout)}) הוא של הקלפיות בעיר ולא של תושבי העיר כולם.</li>
-      <li>ההתאמה בין קלפי לכתובת נשענת על מסמכי עירייה משנים סמוכות; רמת הביטחון לכל אתר:
-          ${Object.entries(byConf).map(([k, v]) => `${k} — ${v}`).join(' · ')}.</li>
+      <li>${DATA.city.match_note}${Object.keys(byConf).length > 1
+          ? `; רמת הביטחון לכל אתר: ${Object.entries(byConf).map(([k, v]) => `${k} — ${v}`).join(' · ')}`
+          : ''}.</li>
       <li>מיקום הסמן הוא של אתר ההצבעה, לא של מקום מגוריהם של המצביעים.</li>
     </ul>`;
 }
@@ -591,7 +599,7 @@ const SITE_COLS = [
   ['voters', 'מצביעים', s => num(s.voters), s => s.voters],
   ['turnout', 'אחוז הצבעה', s => pct(s.turnout), s => s.turnout],
   ['dnat', 'פער מהארצי', s => signed(deltaNat(s)), s => deltaNat(s)],
-  ['dcity', 'פער מחיפה', s => signed(deltaCity(s)), s => deltaCity(s)],
+  ['dcity', 'פער ' + FROM_CITY, s => signed(deltaCity(s)), s => deltaCity(s)],
   ['nonv', 'לא הצביעו', s => num(s.non_voters), s => s.non_voters],
   ['potc', 'פוטנציאל קואליציה', s => num(s.pot.coalition), s => s.pot.coalition],
   ['poto', 'פוטנציאל אופוזיציה', s => num(s.pot.opposition), s => s.pot.opposition],

@@ -1,6 +1,6 @@
 import json, os, time, urllib.parse, urllib.request, re, sys, config
 
-CACHE = 'data/geocache.json'
+CACHE = config.data('geocache.json')
 cache = json.load(open(CACHE)) if os.path.exists(CACHE) else {}
 UA = config.UA
 BBOX = config.BBOX  # (W, S, E, N)
@@ -17,7 +17,7 @@ def nominatim(params):
             time.sleep(2 + 2*attempt)
     return []
 
-def in_haifa(lat, lon):
+def in_city(lat, lon):
     return config.in_bbox(lat, lon)
 
 def geocode(addr):
@@ -36,7 +36,7 @@ def geocode(addr):
         res = nominatim(p); time.sleep(1.1)
         for r in res:
             lat, lon = float(r['lat']), float(r['lon'])
-            if in_haifa(lat, lon):
+            if in_city(lat, lon):
                 out = {'lat': lat, 'lon': lon, 'display': r['display_name'],
                        'osm_type': r.get('type'), 'addresstype': r.get('addresstype'),
                        'precision': 'house' if (num and r.get('addresstype') in ('house_number','building','place')) else ('street' if i < len(tries)-0 else 'other'),
@@ -44,7 +44,7 @@ def geocode(addr):
                 cache[addr] = out; return out
     cache[addr] = None; return None
 
-addrs = sorted({s['address'] for s in json.load(open('data/raw.json'))['stations'] if s['address']})
+addrs = sorted({s['address'] for s in json.load(open(config.data('raw.json')))['stations'] if s['address']})
 for i, a in enumerate(addrs, 1):
     r = geocode(a)
     msg = 'MISS' if not r else '%.5f,%.5f stage%d' % (r['lat'], r['lon'], r['query_stage'])

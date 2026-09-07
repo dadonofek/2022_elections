@@ -1,8 +1,8 @@
 """Snap polling sites to the real building where OSM knows the named venue.
 
-Nominatim resolves most Haifa addresses only to a street centroid. Most polling
+Nominatim resolves most addresses only to a street centroid. Most polling
 sites are named schools / community centres, so we pull every named school,
-kindergarten, community centre and college in the Haifa bbox from Overpass and
+kindergarten, community centre and college in the city's bbox from Overpass and
 match them to site names. A match is accepted only when it also sits close to
 the address the site was geocoded to, which guards against same-name venues.
 """
@@ -33,13 +33,13 @@ def overpass():
     return []
 
 import os
-if os.path.exists('data/osm_venues.json'):
-    els = json.load(open('data/osm_venues.json'))          # cached Overpass response
+if os.path.exists(config.data('osm_venues.json')):
+    els = json.load(open(config.data('osm_venues.json')))          # cached Overpass response
     print('osm venues (cached):', len(els))
 else:
     els = overpass()
     print('osm venues:', len(els))
-    if els: json.dump(els, open('data/osm_venues.json', 'w'), ensure_ascii=False)
+    if els: json.dump(els, open(config.data('osm_venues.json'), 'w'), ensure_ascii=False)
 
 # ---------------- name normalisation ----------------
 ABBR = [
@@ -73,8 +73,8 @@ for e in els:
             venues.append({'name': t[key], 'tok': tokens(t[key]), 'lat': c['lat'], 'lon': c['lon'],
                            'amenity': t.get('amenity') or t.get('leisure') or t.get('building')})
 
-raw = json.load(open('data/raw.json'))
-cache = json.load(open('data/geocache.json'))
+raw = json.load(open(config.data('raw.json')))
+cache = json.load(open(config.data('geocache.json')))
 sites = {}
 for s in raw['stations']:
     sites.setdefault((s['site'], s['address']), None)
@@ -117,7 +117,7 @@ for (name, addr) in sites:
                                     'dist_m': round(d), 'cov': round(cov, 2), 'jacc': round(j, 2)}
         report.append((round(d), name, v['name']))
 
-json.dump(snaps, open('data/osm_snaps.json', 'w'), ensure_ascii=False, indent=1)
+json.dump(snaps, open(config.data('osm_snaps.json'), 'w'), ensure_ascii=False, indent=1)
 report.sort(reverse=True)
 print('snapped sites:', len(snaps), 'of', len(sites))
 print('rejected as name-only-generic:', len(set(r[1] for r in rejected)))

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>מפת הקלפיות של חיפה</title>
+<title>מפת הקלפיות של __CITY_HE__</title>
 <style>
 /* ---------- design tokens ---------- */
 :root{
@@ -20,7 +20,7 @@
   --div-mid:#e6e4df;
   --div-coal-1:#f6c3a7; --div-coal-2:#ef8f5f; --div-coal-3:#c94f1c;
   /* turnout-delta ramp (rose). Sequential, not diverging: measured against the
-     national average 123 of Haifa's 140 sites sit below it, so the data is
+     national average most of the city's sites sit below it, so the data is
      one-sided. Rose is the one hue far enough from both bloc hues — the opposition
      blue and the coalition orange — to never read as a bloc (worst CVD dE 11.2 / 12.5);
      validated with the dataviz skill's validator as an ordinal ramp. */
@@ -419,8 +419,8 @@ table.full tbody tr:hover{background:var(--surface-2)}
 <div class="app">
   <header>
     <div class="brand">
-      <h1>מפת הקלפיות של חיפה — הבחירות לכנסת ה-25</h1>
-      <p>424 קלפיות ב-140 אתרי הצבעה · נובמבר 2022 · תוצאות רשמיות של ועדת הבחירות המרכזית</p>
+      <h1>מפת הקלפיות של __CITY_HE__ — הבחירות לכנסת ה-25</h1>
+      <p>__N_KALPI__ קלפיות ב-__N_SITES__ אתרי הצבעה · נובמבר 2022 · תוצאות רשמיות של ועדת הבחירות המרכזית</p>
     </div>
     <div class="stats" id="stats"></div>
     <button class="btn statsmore" id="btnStatsMore" aria-expanded="false">עוד</button>

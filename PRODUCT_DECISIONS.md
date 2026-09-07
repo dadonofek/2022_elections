@@ -38,7 +38,7 @@ the size of the actual electorate. That number is now the first header tile.
   no attribution — so the map does not pick a side unless the reader does.
 - **Hue says which bloc, lightness says how many.** Rather than invent new hues, the
   potential ramp is a sequential ramp built on the *existing* bloc hue: pick coalition
-  and you get a blue ramp, opposition an orange one. Consistent with everything else on
+  and you get its ramp — orange for the coalition, blue for the opposition. Consistent with everything else on
   the map, and no new semantics to learn.
 - ~~**Marker area follows the potential in this mode**, not the electorate — otherwise the
   headline number is not the thing the eye is measuring.~~ **Superseded in Round 3:** it
@@ -83,16 +83,16 @@ The national figure is **derived, not asserted**: `build_data.py` recomputes it 
 
 *(PM delegated this one.)*
 
-Blue, orange, green and purple are already spoken for (coalition, opposition, other
+Blue, orange, green and purple are already spoken for (the two blocs, other
 lists, turnout). The delta ramp must not read as a bloc. Two candidates were **measured
 and rejected** with the dataviz skill's validator:
 
-- **gold ↔ teal** — gold collapses to **ΔE 2.5** against opposition orange under
+- **gold ↔ teal** — gold collapses to **ΔE 2.5** against the bloc orange under
   deuteranopia. A colourblind reader would read "below baseline" as "opposition".
-- **crimson (hue 25)** — one step lands **ΔE 4.7** from opposition orange.
+- **crimson (hue 25)** — one step lands **ΔE 4.7** from the bloc orange.
 
-**Chosen: rose, OKLCH hue 0.** Worst separation ΔE **11.2** from opposition orange and
-**12.5** from coalition blue; passes all four ordinal checks (monotone lightness,
+**Chosen: rose, OKLCH hue 0.** Worst separation ΔE **11.2** from the bloc orange and
+**12.5** from the bloc blue; passes all four ordinal checks (monotone lightness,
 adjacent ΔL ≥ 0.06, light-end contrast ≥ 2:1, single hue) in **both** light and dark.
 
 ```
@@ -327,7 +327,57 @@ just the potential ones.
 
 ---
 
-# Round 4 — the map picks a side: הדמוקרטים
+# Round 4 — palette, and a legend that told the truth in only one theme
+
+Three small things, reported off one screenshot of the phone in dark mode.
+
+## 4.1 Opposition is blue, coalition is orange
+
+**Asked:** opposition blue, everywhere in the project.
+
+**Done as a swap of the two bloc values, not a new palette.** `--bloc-coalition` and
+`--bloc-opposition` exchange hexes, and so do the pairs built on them: the diverging
+margin scale (`--div-opp-*` ↔ `--div-coal-*`) and the potential ramps
+(`--pot-coal-*` ↔ `--pot-opp-*`), in both themes. Nothing in the JS refers to a hue — it
+reads `BLOC_VAR` — so the swap is entirely in the tokens.
+
+It is the **same validated triple**, only reassigned, so every all-pairs CVD measurement
+still holds with the bloc names exchanged; the rose delta ramp keeps its ΔE 11.2 / 12.5
+clearance from both. A bloc still keeps one colour across every mode. `--accent` stays
+`#2a78d6`, which now matches the opposition rather than the coalition — it is UI chrome
+(buttons, focus rings, party bars), and it was equally tied to a bloc hue before.
+
+## 4.2 "Big and dark" was only true in light mode
+
+**Reported:** the legend note and the colour scale contradict each other.
+
+They did, in dark mode only. Every sequential ramp was inverted for dark mode — light =
+high, the usual "more ink on a dark ground" convention — but the note says
+`סמן גדול וכהה = ציבור בוחרים גדול שהרבה ממנו לא הגיע לקלפי`. In dark mode the darkest
+markers were the sites with the *least* potential, i.e. exactly backwards.
+
+**Decided: the words win.** The potential ramps and the rose ramp are no longer redefined
+for dark mode — one ramp, both themes, darker always meaning *more*. Their dark ends were
+checked against the dark surface and clear **2.5:1**, above the 2:1 ordinal floor, so the
+deepest step stays readable. The cost is real and accepted: on a dark ground a dark marker
+recedes, so the highest-potential sites are no longer the most luminous ones. A rule the
+reader can trust is worth more than the extra pop.
+
+**Not fixed:** the turnout ramp still inverts in dark mode, so its own note
+(`סמן גדול ובהיר…`) reads backwards there. Sharing the light ramp would put `--seq-5`
+(`#4a2465`) at **1.55:1** against the dark surface — it needs a new dark-mode ramp
+authored in the same direction, not a deletion. Left for a decision.
+
+## 4.3 The potential legend said too much
+
+The note carried the reading rule, the filtered total, and the estimate caveat — six lines
+in a 190px box on a phone. Trimmed to the reading rule alone. Nothing is lost: the city
+total is the first header tile, the filtered count is in the list header above the list,
+and the estimate caveat is in both the site panel and `על הנתונים`.
+
+---
+
+# Round 5 — the map picks a side: הדמוקרטים
 
 **Asked:** *"I want to specifically support הדמוקרטים. I want a selector
 אופוזיציה / הדמוקרטים (default הדמוקרטים), and when it is set, potential and everything
@@ -335,7 +385,7 @@ else should point to הדמוקרטים (קולות של העבודה ומרצ).
 
 **Decided: build it as a `camp`, not as a fourth bloc — and let it repoint the map.**
 
-## 4.1 Why a camp and not a bloc
+## 5.1 Why a camp and not a bloc
 
 הדמוקרטים is **inside** the broad opposition, not beside it. The three blocs partition the
 valid vote (`coalition + opposition + other = valid`) and everything built on that
@@ -353,7 +403,7 @@ Everywhere the camp appears next to the partition — the site card's bloc split
 potential bars — it is **labelled as a subset** (`הדמוקרטים — מתוך האופוזיציה`) and its bar
 is scaled against the blocs, so it can never be read as a fourth slice of the same pie.
 
-## 4.2 One selector, not one option per camp
+## 5.2 One selector, not one option per camp
 
 The `הגוש שלי` select already picked whose non-voters to count. Adding `הדמוקרטים` as a
 fifth option would have made the potential point at it and **nothing else** — the sort, the
@@ -379,7 +429,7 @@ non-voters so "the map does not pick a side unless the reader does". This round 
 precisely that the map picks a side; the neutral view is one option away and still the
 honest one, so it stays in the list rather than being the default.
 
-## 4.3 The camp is `config.py` data, not code
+## 5.3 The camp is `config.py` data, not code
 
 `config.CAMPS` names each camp, its party letter codes and its caveat; `DEFAULT_CAMP` picks
 the one the map opens on. `build_data.py` totals it at station, site and city level and adds
@@ -387,28 +437,34 @@ it to `pot`; the front end reads `DATA.camps` and builds the select from it. Ano
 or another election's camps, is a config edit — no JS change. A camp without `parties`
 (that is how `opposition` is defined) reuses the bloc total that already carries its key.
 
-## 4.4 The colour — measured, per §3
+## 5.4 The colour — measured, per Round 1 §3
 
-הדמוקרטים sits inside the opposition, so it **cannot borrow the opposition's orange**: the
-map would say "opposition" while the legend said "הדמוקרטים", and the two are 6.8x apart in
-size. It needs a hue of its own, and blue, orange, green, purple and rose are all spoken for.
+הדמוקרטים sits inside the opposition, so it **cannot borrow the opposition's hue**: the map
+would say "opposition" while the legend said "הדמוקרטים", and the two are 6.8x apart in size.
+It needs a hue of its own, and blue, orange, green, purple and rose are all spoken for.
 
 **Chosen: teal, OKLCH hue 210.** Measured with the dataviz validator against the three bloc
-colours, worst CVD ΔE (min of protan/deutan) **15.9 / 12.6 / 10.0** vs coalition blue,
-opposition orange and other green at the deep end — better separation than the shipped rose
-ramp manages against the same three (3.5, on green). Both ramps pass every ordinal check in
-both themes: monotone lightness, adjacent ΔL ≥ 0.06, light end 2.19:1 on the light surface
-and 2.30:1 on the dark, single hue.
+colours, worst CVD ΔE (min of protan/deutan) **15.9 / 12.6 / 10.0** against the blue, the
+orange and the green at the deep end — better separation than the shipped rose ramp manages
+against the same three (3.5, on green). Deliberately stated by hue and not by bloc: Round 4
+swapped which bloc wears the blue and which the orange, and the measurement is of the hues,
+so it survived that swap untouched — as would the next one.
 
 ```
-dem   light  #00bed5 #00a7bc #0090a2 #007a8a #006572
-dem   dark   #005d69 #007381 #00899a #00a1b5 #00b9cf
+dem   both themes  #00bed5 #00a7bc #0090a2 #007a8a #006572
 ```
+
+**One ramp, both themes**, per Round 4.2 — darker has to keep meaning "more" everywhere, so
+the ramp is not redefined for dark mode. Its dark end clears **2.57:1** against the dark
+surface, the widest margin of any ramp in the file (the others sit at 2.30–2.46), and the
+light end 2.19:1 against the light one. Monotone lightness, adjacent ΔL ≥ 0.06, single hue.
+The camp's **categorical** colour does still get a dark value (`#00707e`), exactly as the
+bloc colours do: it is a dot beside a label, not a step on a scale.
 
 **One accepted failure, recorded so it is not "fixed" blind:** at hue 210 the sRGB gamut
 tops out at C ≈ 0.08, below the validator's 0.10 categorical chroma floor. Raising the
-chroma means moving the hue toward 240, which is coalition blue's neighbourhood — a left
-camp painted in the coalition's colour is the worse error. Every categorical use of the
+chroma means moving the hue toward 240, the blue's neighbourhood — a camp that reads as one
+of the blocs is the worse error, whichever bloc is wearing blue this round. Every categorical use of the
 colour (the camp's dot, its bar) ships with its label beside it.
 
 **Its own bins.** The camp's per-site potential tops out at **364**, against 1,532 for the
@@ -416,15 +472,17 @@ opposition. Reusing the opposition's `100 / 250 / 450 / 700` would paint 126 of 
 the palest step. The camp scale is `50 / 100 / 175 / 260` — 64 / 43 / 22 / 8 / 3 sites per
 step, the same shape the other ramps have.
 
-## 4.5 The caveat, and where it lives
+## 5.5 The caveat, and where it lives
 
 הדמוקרטים **did not exist in November 2022**. העבודה and מרצ ran as two separate lists and
 מרצ did not clear the threshold; the party was formed from their merger in 2024. Summing
 them is a retrospective construct, and it is stated in three places: under the camp select,
-in the potential legend, and in `על הנתונים`, which also gives the city totals. Everything
+in the site card, and in `על הנתונים`, which also gives the city totals. **Not** in the
+potential legend — Round 4.3 cut that box down to the reading rule alone, and a caveat that
+costs six lines of a 190px box on a phone is exactly what it cut. Everything
 in Round 1's estimate caveat still applies on top of it.
 
-## 4.6 The header tile sums the sites
+## 5.6 The header tile sums the sites
 
 The camp's header tile is the **sum of the 140 site potentials**, not `city.pot` — the
 city-level figure applies one city-wide vote share to all 112,642 non-voters, and comes out

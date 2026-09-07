@@ -25,7 +25,9 @@ need an internet connection.
   the `שיעור המחנה שלי` sort, the first header tile and the table's camp columns. It is
   **not** a fourth bloc — הדמוקרטים sits *inside* the broad opposition, so the bloc split,
   *גוש מוביל*, *פער בין הגושים* and the filter chips keep partitioning the vote three ways
-  and the camp is shown beside them, labelled as the subset it is. הדמוקרטים did not exist
+  and the camp is shown beside them, labelled as the subset it is. It also gets a hue of its
+  own — **teal** — because a camp painted in its parent bloc's colour would say "opposition"
+  while the legend said "הדמוקרטים". הדמוקרטים did not exist
   in 2022 (העבודה and מרצ ran separately, and מרצ missed the threshold): the sum is a
   retrospective construct, and the UI says so wherever it appears.
 * **Five color modes** (*פוטנציאל* is the default)
@@ -33,7 +35,7 @@ need an internet connection.
     `eligible x (1 - turnout) x the group's share of the votes cast here`. A second
     selector picks whose votes to count — `המחנה שלי` (the default), the 2022 coalition,
     the other lists, or nobody, which shows raw non-voters.
-    Hue says *which* bloc and lightness says *how many*, while the marker area keeps
+    Hue says *which* group and lightness says *how many*, while the marker area keeps
     carrying the electorate — so a large dark marker is a big electorate with a lot of
     it still on the table, and a small dark one is a small electorate that barely voted.
     **It is an estimate, not a forecast** — see the caveats in *על הנתונים*.
@@ -44,9 +46,10 @@ need an internet connection.
     The baseline is national, not the city's own mean, because against the city mean
     half the sites sit above it by construction and nothing reads as low. The gap
     from the city average is shown too, per site and in the table.
-  * *גוש מוביל* — which bloc led at the site (categorical: blue / orange / green).
-  * *פער בין הגושים* — coalition-minus-opposition margin, a diverging blue<->orange
-    scale with a neutral gray midpoint.
+  * *גוש מוביל* — which bloc led at the site (categorical: the broad opposition is
+    **blue**, the 2022 coalition **orange**, other lists **green**).
+  * *פער בין הגושים* — coalition-minus-opposition margin, a diverging orange<->blue
+    scale with a neutral gray midpoint, reusing the two bloc hues.
 * **Filters** by free text (site name, address, station number or "iron" number),
   a turnout **range** (min *and* max sliders), and leading bloc. The list, the
   markers, the legend counts and the table all follow the active filter. The list
@@ -152,8 +155,9 @@ the bloc total of the same key, which is how `אופוזיציה רחבה` is de
 `DEFAULT_CAMP` is the one the map opens on. Adding or swapping a camp is a config edit —
 the front end builds the selector from the data. A camp with its own party list also needs
 a `--camp-<key>` colour and a `--pot-<key>-0..4` ramp in `src_map.html` plus its bin edges
-in `POT_BINS`; validate any new ramp as described in `PRODUCT_DECISIONS.md` §4.4. The Hebrew UI strings in `src_map.html` / `src_app.js` are
-generic ("polling site", "turnout", …) and need no change; only the `<title>` and the
+in `POT_BINS`; validate any new ramp as described in `PRODUCT_DECISIONS.md` §5.4.
+
+The Hebrew UI strings in `src_map.html` / `src_app.js` are generic ("polling site", "turnout", …) and need no change; only the `<title>` and the
 "על הנתונים" panel text mention specifics worth reviewing.
 
 ## Tests

@@ -14,16 +14,19 @@ need an internet connection.
 
 ## What the map shows
 
-* **One marker per polling site.** Marker **area** is proportional to the number of voters
-  at that site; marker **color** follows the selected mode.
+* **One marker per polling site.** Marker **area** is proportional to the number of
+  **eligible voters** the site serves (not the number who voted), so a large pale
+  marker in turnout mode is a big electorate that largely stayed home. Marker
+  **color** follows the selected mode.
 * **Three color modes** (*אחוז הצבעה* is the default)
-  * *אחוז הצבעה* — turnout, as a one-hue light→dark ramp.
+  * *אחוז הצבעה* — turnout, as a **purple** light→dark ramp, deliberately not a bloc
+    colour so it never reads as "everything voted for one party".
   * *גוש מוביל* — which bloc led at the site (categorical: blue / orange / green).
   * *פער בין הגושים* — coalition-minus-opposition margin, a diverging blue↔orange
     scale with a neutral gray midpoint.
 * **Filters** by free text (site name, address, station number or "iron" number),
-  minimum turnout, and leading bloc. The list, the markers, the legend counts and the
-  table all follow the active filter.
+  a turnout **range** (min *and* max sliders), and leading bloc. The list, the
+  markers, the legend counts and the table all follow the active filter.
 * **Site detail** (click a marker or a list row): bloc split, largest parties, a
   collapsible per-station breakdown (*פירוט לפי קלפי*, collapsed by default), the full
   vote table, and the location accuracy for that site.

@@ -33,11 +33,13 @@ const colorOf = s => state.mode === 'lead' ? blocColor(s.lead)
   : state.mode === 'turnout' ? turnoutColor(s.turnout)
   : marginColor(s.margin);
 
-// marker radius ~ sqrt(voters) so area is proportional to the electorate,
-// scaled down when zoomed out so dense areas do not fuse into one blob
+// marker radius ~ sqrt(eligible voters) so the marker AREA is proportional to the
+// size of the electorate the station serves — colour then shows how much of that
+// electorate actually turned out. Scaled down when zoomed out so dense areas do
+// not fuse into one blob.
 const zoomScale = () => { const z = map.getZoom(); return z <= 12 ? 0.62 : z <= 13 ? 0.78 : z <= 14 ? 0.92 : z <= 16 ? 1 : 1.15; };
-const baseRadius = v => Math.max(3.2, Math.min(13, 1.2 + Math.sqrt(v) * 0.30));
-const radiusOf = s => baseRadius(s.voters) * zoomScale();
+const baseRadius = v => Math.max(3.2, Math.min(14, 1.2 + Math.sqrt(v) * 0.235));
+const radiusOf = s => baseRadius(s.eligible) * zoomScale();
 
 const partyName = k => DATA.party_names[k] || k;
 // one address arrives mangled from the official PDF; everything else is used verbatim
@@ -49,6 +51,7 @@ const state = {
   mode: 'turnout',
   q: '',
   turnoutMin: 0,
+  turnoutMax: 100,
   blocs: new Set(['coalition', 'opposition', 'other']),
   sort: 'kalpi',
   selected: null,
@@ -64,7 +67,7 @@ function visible() {
   const q = state.q.trim();
   return sites.filter(s => {
     if (!state.blocs.has(s.lead)) return false;
-    if (s.turnout < state.turnoutMin) return false;
+    if (s.turnout < state.turnoutMin || s.turnout > state.turnoutMax) return false;
     if (q) {
       const hay = s.name + ' ' + s.address + ' ' + addressOf(s) + ' ' + s.kalpiot.map(k => k.kalpi + ' ' + k.barzel).join(' ');
       if (!hay.includes(q)) return false;
@@ -107,14 +110,14 @@ const markers = new Map();
 function tipHtml(s) {
   return `<b>${esc(s.name)}</b>
     <div class="r"><span>${esc(addressOf(s))}</span></div>
-    <div class="r"><span>הצבעה ${pct(s.turnout)}</span><span>${num(s.voters)} מצביעים</span><span>${s.n_kalpi} קלפיות</span></div>
+    <div class="r"><span>הצבעה ${pct(s.turnout)}</span><span>${num(s.voters)} מתוך ${num(s.eligible)} בעלי זכות</span><span>${s.n_kalpi} קלפיות</span></div>
     <div class="lead"><span class="dot" style="background:${blocColor(s.lead)}"></span>
       <span>מוביל: ${BLOC_LABEL[s.lead]} · ${pct(share(s[s.lead], s.valid))}</span></div>`;
 }
 
 function buildMarkers() {
   markerLayer.clearLayers(); markers.clear();
-  for (const s of [...sites].sort((a, b) => b.voters - a.voters)) {   // small markers last = on top
+  for (const s of [...sites].sort((a, b) => b.eligible - a.eligible)) {   // small markers last = on top
     if (s.lat == null) continue;
     const m = L.circleMarker([s.lat, s.lon], {
       radius: radiusOf(s), color: cssVar('--ring'), weight: 1.5, opacity: 1,
@@ -156,7 +159,7 @@ function updateLabels() {
   if (!map.hasLayer(labelLayer)) labelLayer.addTo(map);
   const bounds = map.getBounds().pad(0.02);
   const cand = visible().filter(s => s.lat != null && bounds.contains([s.lat, s.lon]))
-    .sort((a, b) => b.voters - a.voters);
+    .sort((a, b) => b.eligible - a.eligible);
   const CH = 7.0, LH = 15;               // approx char width / line height at 11.5px
   const placed = [];
   const overlaps = (a, b) => !(a.r < b.l || a.l > b.r || a.bo < b.t || a.t > b.bo);
@@ -205,7 +208,8 @@ function renderLegend() {
   } else if (state.mode === 'turnout') {
     el.innerHTML = `<h3>אחוז הצבעה באתר</h3>
       <div class="ramp">${TURNOUT_VARS.map(v => `<span style="background:${cssVar(v)}"></span>`).join('')}</div>
-      <div class="ramp-labels"><span>עד ${TURNOUT_BINS[0]}%</span><span>${TURNOUT_BINS[2]}%</span><span>${TURNOUT_BINS[TURNOUT_BINS.length - 1]}%+</span></div>` + sizeLegend();
+      <div class="ramp-labels"><span>עד ${TURNOUT_BINS[0]}%</span><span>${TURNOUT_BINS[2]}%</span><span>${TURNOUT_BINS[TURNOUT_BINS.length - 1]}%+</span></div>
+      <p class="legend-note">סמן גדול ובהיר = ציבור בוחרים גדול שרבים בו לא הצביעו</p>` + sizeLegend();
   } else {
     el.innerHTML = `<h3>פער בין הגושים (2022)</h3>
       <div class="ramp">${MARGIN_VARS.map(v => `<span style="background:${cssVar(v)}"></span>`).join('')}</div>
@@ -213,11 +217,11 @@ function renderLegend() {
   }
 }
 function sizeLegend() {
-  const ex = [200, 600, 1200];
+  const ex = [700, 1600, 3500];
   return `<div class="size-legend">${ex.map(v => {
     const r = baseRadius(v);
     return `<div class="b"><i style="width:${2 * r}px;height:${2 * r}px"></i><span>${num(v)}</span></div>`;
-  }).join('')}<div class="b" style="align-self:center"><span>מצביעים<br>(שטח הסמן)</span></div></div>`;
+  }).join('')}<div class="b" style="align-self:center"><span>בעלי זכות בחירה<br>(שטח הסמן)</span></div></div>`;
 }
 
 // ---------------------------------------------------------------- list
@@ -328,6 +332,9 @@ function renderAbout() {
     <p>כל סמן הוא <b>אתר הצבעה</b> אחד בחיפה בבחירות לכנסת ה-25 (1 בנובמבר 2022).
        ב-${num(c.n_sites)} האתרים פעלו ${num(c.n_kalpi)} קלפיות; אתר שבו כמה קלפיות מוצג כסמן אחד,
        והפירוט לפי קלפי נפתח בלחיצה עליו וכן בטבלה.</p>
+    <p><b>שטח</b> הסמן פרופורציוני למספר <b>בעלי זכות הבחירה</b> באתר (לא למספר המצביעים
+       בפועל), ו<b>צבעו</b> נקבע לפי מצב הצביעה הנבחר. כך, במצב "אחוז הצבעה", סמן גדול
+       ובהיר הוא אתר עם ציבור בוחרים גדול שרבים בו לא הגיעו לקלפי.</p>
     <h3>מקורות</h3>
     <ul>
       <li>תוצאות, בעלי זכות בחירה ומצביעים לכל קלפי — הקובץ הרשמי של ועדת הבחירות המרכזית
@@ -423,9 +430,18 @@ $('#modeSeg').addEventListener('click', e => {
   renderAll();
 });
 $('#q').addEventListener('input', e => { state.q = e.target.value; renderAll(); });
-$('#turnoutMin').addEventListener('input', e => {
-  state.turnoutMin = +e.target.value; $('#turnoutVal').textContent = state.turnoutMin + '%'; renderAll();
-});
+function syncTurnoutRange(changed) {
+  let lo = +$('#turnoutMin').value, hi = +$('#turnoutMax').value;
+  if (lo > hi) {                    // push the other handle so they never cross
+    if (changed === 'min') hi = lo, $('#turnoutMax').value = hi;
+    else lo = hi, $('#turnoutMin').value = lo;
+  }
+  state.turnoutMin = lo; state.turnoutMax = hi;
+  $('#turnoutVal').textContent = `${lo}%–${hi}%`;
+  renderAll();
+}
+$('#turnoutMin').addEventListener('input', () => syncTurnoutRange('min'));
+$('#turnoutMax').addEventListener('input', () => syncTurnoutRange('max'));
 $('#sort').addEventListener('change', e => { state.sort = e.target.value; renderList(); });
 $('#blocChips').innerHTML = ['coalition', 'opposition', 'other'].map(b =>
   `<label class="chip" data-bloc="${b}" data-on="1"><input type="checkbox" checked>

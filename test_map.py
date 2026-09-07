@@ -75,7 +75,7 @@ scenarios = {
   'detail':  ('light', (do("document.querySelectorAll('.site')[3].click()"),)),
   'labels':  ('light', (click('#btnLabels'), do("map.setZoom(15)"))),
   'table':   ('light', (click('#btnTable'),)),
-  'filter':  ('light', (do("document.querySelector('#turnoutMin').value=60;document.querySelector('#turnoutMin').dispatchEvent(new Event('input'))"),)),
+  'filter':  ('light', (do("for(const [id,v] of [['#turnoutMin',55],['#turnoutMax',70]]){const e=document.querySelector(id);e.value=v;e.dispatchEvent(new Event('input'))}"),)),
   'search':  ('light', (do("const q=document.querySelector('#q');q.value='הרצל';q.dispatchEvent(new Event('input'))"),)),
   'narrow':  ('light', (), 900, 1100),
 }

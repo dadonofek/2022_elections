@@ -14,7 +14,8 @@
   --bloc-coalition:#2a78d6; --bloc-opposition:#eb6834; --bloc-other:#1baf7a;
   --accent:#2a78d6; --accent-ink:#fff;
   --ring:#fcfcfb;
-  --seq-0:#86b6ef; --seq-1:#5598e7; --seq-2:#2a78d6; --seq-3:#1c5cab; --seq-4:#124883; --seq-5:#0d366b;
+  /* turnout ramp: purple — deliberately not a bloc colour so it never reads as a party */
+  --seq-0:#eadcf3; --seq-1:#d0aee4; --seq-2:#b681d3; --seq-3:#9455b8; --seq-4:#6f3a90; --seq-5:#4a2465;
   --div-opp-3:#c94f1c; --div-opp-2:#ef8f5f; --div-opp-1:#f6c3a7;
   --div-mid:#e6e4df;
   --div-coal-1:#9ec5f4; --div-coal-2:#3987e5; --div-coal-3:#1c5cab;
@@ -31,7 +32,7 @@
     --bloc-coalition:#3987e5; --bloc-opposition:#d95926; --bloc-other:#199e70;
     --accent:#3987e5; --accent-ink:#0b0b0b;
     --ring:#1a1a19;
-    --seq-0:#184f95; --seq-1:#256abf; --seq-2:#3987e5; --seq-3:#6da7ec; --seq-4:#9ec5f4; --seq-5:#cde2fb;
+    --seq-0:#3d1d5c; --seq-1:#5c2f82; --seq-2:#7e4aa6; --seq-3:#a273c6; --seq-4:#c6a0e0; --seq-5:#e6d3f4;
     --div-opp-3:#f0a077; --div-opp-2:#d95926; --div-opp-1:#8a4423;
     --div-mid:#383835;
     --div-coal-1:#1c5cab; --div-coal-2:#3987e5; --div-coal-3:#9ec5f4;
@@ -46,7 +47,7 @@
   --bloc-coalition:#3987e5; --bloc-opposition:#d95926; --bloc-other:#199e70;
   --accent:#3987e5; --accent-ink:#0b0b0b;
   --ring:#1a1a19;
-  --seq-0:#184f95; --seq-1:#256abf; --seq-2:#3987e5; --seq-3:#6da7ec; --seq-4:#9ec5f4; --seq-5:#cde2fb;
+  --seq-0:#3d1d5c; --seq-1:#5c2f82; --seq-2:#7e4aa6; --seq-3:#a273c6; --seq-4:#c6a0e0; --seq-5:#e6d3f4;
   --div-opp-3:#f0a077; --div-opp-2:#d95926; --div-opp-1:#8a4423;
   --div-mid:#383835;
   --div-coal-1:#1c5cab; --div-coal-2:#3987e5; --div-coal-3:#9ec5f4;
@@ -122,6 +123,7 @@ input[type=search],input[type=text],select{
   background:var(--surface-1); color:var(--text-primary);
 }
 input[type=range]{width:100%; accent-color:var(--accent)}
+.dualrange{display:flex; flex-direction:column; gap:2px}
 .chips{display:flex; gap:5px; flex-wrap:wrap}
 .chip{
   display:inline-flex; align-items:center; gap:6px; font-size:12.5px;
@@ -140,6 +142,7 @@ input[type=range]{width:100%; accent-color:var(--accent)}
 .ramp{display:flex; height:11px; border-radius:4px; overflow:hidden; gap:2px; margin:4px 0 3px}
 .ramp span{flex:1; box-shadow:0 0 0 1px rgba(11,11,11,.12) inset}
 .ramp-labels{display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); font-variant-numeric:tabular-nums}
+.legend-note{margin:6px 0 0; font-size:11px; line-height:1.35; color:var(--text-muted)}
 .size-legend{display:flex; align-items:flex-end; gap:12px; margin-top:8px; padding-top:8px; border-top:1px solid var(--border)}
 .size-legend .b{display:flex; flex-direction:column; align-items:center; gap:3px; font-size:11px; color:var(--text-muted)}
 .size-legend i{display:block; border-radius:50%; background:transparent; border:1.5px solid var(--text-muted)}
@@ -330,8 +333,11 @@ table.full tbody tr:hover{background:var(--surface-2)}
           <input type="search" id="q" placeholder="חיפוש לפי שם אתר, כתובת או מספר קלפי" aria-label="חיפוש">
         </div>
         <div class="field">
-          <label class="lab" for="turnoutMin">אחוז הצבעה מינימלי: <span class="rangeval" id="turnoutVal">0%</span></label>
-          <input type="range" id="turnoutMin" min="0" max="90" step="1" value="0">
+          <label class="lab">טווח אחוז הצבעה: <span class="rangeval" id="turnoutVal">0%–100%</span></label>
+          <div class="dualrange">
+            <input type="range" id="turnoutMin" min="0" max="100" step="1" value="0" aria-label="אחוז הצבעה מינימלי">
+            <input type="range" id="turnoutMax" min="0" max="100" step="1" value="100" aria-label="אחוז הצבעה מקסימלי">
+          </div>
         </div>
         <div class="field">
           <label class="lab">גוש מוביל באתר</label>

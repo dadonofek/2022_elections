@@ -228,7 +228,26 @@ table.kt tbody tr:hover{background:var(--surface-2)}
 /* mute the basemap: keeps Hebrew street names legible while the data markers lead */
 #map .leaflet-tile-pane{filter:saturate(.2) brightness(1.08) contrast(.9); opacity:.92}
 #map.tiles-dark .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) saturate(.16) brightness(.88) contrast(.86); opacity:.9}
-.leaflet-popup-content-wrapper{border-radius:10px; box-shadow:var(--shadow)}
+.leaflet-popup-content-wrapper{
+  border-radius:12px; box-shadow:var(--shadow);
+  background:var(--surface-1); color:var(--text-primary);
+  border:1px solid var(--border);
+}
+.leaflet-popup-tip{background:var(--surface-1); border:1px solid var(--border)}
+.leaflet-popup-content{margin:11px 13px; direction:rtl; line-height:1.45}
+.leaflet-popup-close-button{color:var(--text-muted)}
+.leaflet-popup-close-button:hover{color:var(--text-primary)}
+/* the compact card a marker tap opens on a touch layout */
+.mcard{direction:rtl; text-align:start}
+.mcard b{display:block; font-size:13.5px; line-height:1.3; padding-inline-start:22px}
+.mcard .ad{font-size:11.5px; color:var(--text-muted); margin:1px 0 8px}
+.mcard .row{display:flex; align-items:center; gap:10px; font-size:12.5px; padding:3px 0}
+.mcard .row > span:first-child{color:var(--text-secondary); white-space:nowrap}
+.mcard .row .v{
+  margin-inline-start:auto; font-weight:700; font-variant-numeric:tabular-nums;
+  display:flex; align-items:center; gap:5px; white-space:nowrap;
+}
+.mcard .mcard-more{width:100%; margin-top:10px; text-align:center; padding:9px 10px; font-size:13px}
 .leaflet-tooltip.tip{
   direction:rtl; text-align:start; background:var(--surface-1); color:var(--text-primary);
   border:1px solid var(--border-strong); border-radius:9px; box-shadow:var(--shadow);

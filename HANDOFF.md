@@ -46,7 +46,8 @@ Address→site match confidence, carried over from the spreadsheet: 133 גבוה
   sequential on the selected bloc's hue), **turnout** (single-hue sequential ramp),
   **delta vs the national average** (rose deficit ramp), **leading bloc** (categorical),
   **bloc margin** (diverging blue<->orange, gray midpoint). The list defaults to
-  potential-descending, and below 1000px the map and list are separate tabs.
+  potential-descending, and below 1000px the map and list are separate tabs, where a
+  marker tap opens a compact card on the map rather than jumping to the site panel.
 * Filters: free text (site name, address, station number, iron number), minimum turnout,
   leading bloc. Markers, list, legend counts and table all follow the active filter.
 * Click a site → detail panel: bloc split, largest parties, a collapsible per-station
@@ -127,6 +128,17 @@ overlays escaping their container, and the table view covering the map. Screensh
    edge. `.mapwrap` was first, which put the control panel on the left of a Hebrew UI.
    `.sidebar` leads now (which also fixes tab and screen-reader order); an `order:`
    property would have fixed the paint and left both wrong.
+12. A marker tap on a phone ran straight into `selectSite`, which switches to the list
+   tab — so asking "what is this circle?" cost the user the map. Touch layouts bind a
+   click-driven **popup** card instead (tooltips are `interactive:false`, so a link
+   inside one is not tappable), and the full panel is reached only by its button.
+   `bindMarkerUI` picks the binding per layout and **re-binds on breakpoint change**, so
+   a resize cannot leave the wrong one attached. Checks: `phone_tap`, `phone_card_more`,
+   `desktop_tap`.
+13. Leaflet pins `.leaflet-popup-close-button` to the physical **top-right**, which under
+   RTL is where title text *begins* — pad the popup title on its inline-START side.
+   Check: `cardTitleClearsClose`, which measures the text with a `Range`; the
+   `display:block` title box spans the full width and always looks like it overlaps.
 
 ## Product decisions
 

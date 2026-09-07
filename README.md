@@ -42,6 +42,11 @@ need an internet connection.
 * **Mobile**: below 1000px the map and the list are separate tabs (*מפה* / *רשימה*),
   the filters fold into a collapsible section, the secondary controls move into a
   hamburger, and the header shows three statistics with the rest behind *עוד*.
+  Tapping a marker opens a **compact card on the map** — name, potential, turnout with
+  its national delta, leading bloc — and the full site panel is reached only through
+  that card's *כל הנתונים באתר* button, so identifying a circle never costs you the map.
+  On a pointer device the marker keeps its hover tooltip and a click fills the panel
+  beside the map.
 * **Site detail** (click a marker or a list row): bloc split, largest parties, a
   collapsible per-station breakdown (*פירוט לפי קלפי*, collapsed by default), the full
   vote table, and the location accuracy for that site.
@@ -138,13 +143,15 @@ python3 test_map.py                      # all scenarios
 python3 test_map.py dark                 # one scenario
 ```
 
-Twenty-seven scenarios — light, dark, each of the five color modes, each potential
-target, detail, labels, table, sorting, filter, search, and **eight phone scenarios at
-390x844 with touch** — are rendered headlessly and checked for JS errors, failed
+Thirty scenarios — light, dark, each of the five color modes, each potential
+target, detail, labels, table, sorting, filter, search, marker interaction on both
+touch and pointer layouts, and **ten phone scenarios at 390x844 with touch** — are
+rendered headlessly and checked for JS errors, failed
 requests, horizontal overflow, clipped controls, markers and tiles rendering, overlays
 escaping their container, the table view covering the map, the sidebar sitting to the
-right of the map under RTL, and legend ramp labels running in the same direction as
-their swatches. Screenshots land in `build/`.
+right of the map under RTL, legend ramp labels running in the same direction as
+their swatches, and a marker tap on a phone opening its card without leaving the map.
+Screenshots land in `build/`.
 
 The phone scenarios assert controls are **reachable** — on screen, with real size — not
 merely present in the DOM. An earlier suite checked `listItems == 140`, a count of DOM

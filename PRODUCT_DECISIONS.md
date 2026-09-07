@@ -395,47 +395,52 @@ valid vote**, and every one of them is already counted inside the opposition's 8
 
 So the camp is carried **alongside** the blocs, never instead of one:
 
-| stays on the blocs | follows the camp |
+| the blocs keep | the camp adds |
 |---|---|
-| bloc split stack, `גוש מוביל`, `פער בין הגושים`, filter chips | potential (colour + bins + legend), the list's headline figure, the `שיעור המחנה שלי` sort, the header's first tile, the table's camp columns, the marker tooltip and the phone card |
+| bloc split stack, `גוש מוביל`, `פער בין הגושים`, the filter chips, and every bloc option, column and sort they always had | one more option in the group select (the default), one header tile, one sort, two table columns, one bar in the site card and one line under the bloc split — all of them permanent, none of them replacing a bloc's |
 
 Everywhere the camp appears next to the partition — the site card's bloc split and the
 potential bars — it is **labelled as a subset** (`הדמוקרטים — מתוך האופוזיציה`) and its bar
 is scaled against the blocs, so it can never be read as a fourth slice of the same pie.
 
-## 5.2 One selector, not one option per camp
+## 5.2 One selector — the group select that was always there
 
-The `הגוש שלי` select already picked whose non-voters to count. Adding `הדמוקרטים` as a
-fifth option would have made the potential point at it and **nothing else** — the sort, the
-table columns and the header tile would still have said "opposition".
+**First attempt, and the correction.** The `הגוש שלי` select already picked whose
+non-voters to count. I replaced its `אופוזיציה רחבה` option with `המחנה שלי`, resolving to
+whichever camp a second, new select had chosen — so that picking a camp would repoint the
+sort, the table and the header tile too, not only the potential.
 
-Instead there are now two controls with different jobs:
+**Reported immediately: "I lost the opposition now."** And that was the whole of it. The
+broad opposition had stopped being a thing you could point the map at without first
+changing a control on another panel — on a phone, another *tab*. Two controls where there
+had been one, and the one that was already there had lost an option. The ask was never for
+a mode; it was *"add הדמוקרטים"*.
 
-- **`המחנה שלי`** — `הדמוקרטים` / `אופוזיציה רחבה`, **defaulting to הדמוקרטים**. It is the
-  map's subject, and it drives every surface in the right-hand column above.
-- **`למי לשייך את הקולות שלא הגיעו`** — unchanged, except that its opposition option is now
-  `המחנה שלי`, which *resolves* to whichever camp is selected. Picking a camp never costs
-  the reader a second pick, and there is exactly one place to change the subject.
+**Decided: the camp is an option in that select, beside the blocs, and nothing else
+changes.** The select is the original four again — `כל מי שלא הצביע`, the 2022 coalition,
+the broad opposition, the other lists — with `הדמוקרטים` inserted after the first, and it
+is the default. One control, five options, no second state to get wrong. The map-bar copy
+on a phone gets the same five, so every group is one tap away there too.
 
-**The camp select stays in the panel, and does not join the map bar.** Round 3 put the
-colour mode on the map because it is flipped constantly and the panel is on the other tab
-below 1000px. The camp is the opposite kind of control — a subject you set once and leave —
-and the map bar has room for two selects beside its two buttons before it wraps into the
-map. What the map bar does carry is the camp's *name*, inside the target select, so a phone
-reader always sees which camp is painted even where they cannot change it.
+**What the camp keeps, now unconditionally.** The things a second control was invented to
+drive are simply always present, because a camp is a permanent group and not a mode: its
+own header tile, its `שיעור הדמוקרטים` sort beside `שיעור אופוזיציה רחבה`, its two table
+columns, its bar in the site card and its line under the bloc split. They no longer appear
+and disappear with a setting, and the blocs' own columns and sorts came back untouched.
 
-**The default target moved from `כל מי שלא הצביע` to the camp.** Round 1 defaulted to raw
-non-voters so "the map does not pick a side unless the reader does". This round the ask is
-precisely that the map picks a side; the neutral view is one option away and still the
-honest one, so it stays in the list rather than being the default.
+**The rule this leaves behind:** adding a group to a map is adding an option. Do not
+convert an existing control into a pointer at a new one — the reader loses a choice they
+had, and gains a concept they did not ask for.
 
 ## 5.3 The camp is `config.py` data, not code
 
-`config.CAMPS` names each camp, its party letter codes and its caveat; `DEFAULT_CAMP` picks
-the one the map opens on. `build_data.py` totals it at station, site and city level and adds
-it to `pot`; the front end reads `DATA.camps` and builds the select from it. Another camp,
-or another election's camps, is a config edit — no JS change. A camp without `parties`
-(that is how `opposition` is defined) reuses the bloc total that already carries its key.
+`config.CAMPS` names each camp, its party letter codes, the bloc it sits inside and its
+caveat; `DEFAULT_POT_TARGET` picks the group the map opens on — a camp key, a bloc, or
+`none`. `build_data.py` totals it at station, site and city level and adds
+it to `pot`; the front end reads `DATA.camps` and inserts each camp's option into the two
+group selects and the sort, its columns into the table, its bar into the site card and its
+tile into the header. Another camp, or another election's camps, is a config edit — no JS
+change. The blocs are untouched by any of it.
 
 ## 5.4 The colour — measured, per Round 1 §3
 
@@ -476,8 +481,8 @@ step, the same shape the other ramps have.
 
 הדמוקרטים **did not exist in November 2022**. העבודה and מרצ ran as two separate lists and
 מרצ did not clear the threshold; the party was formed from their merger in 2024. Summing
-them is a retrospective construct, and it is stated in three places: under the camp select,
-in the site card, and in `על הנתונים`, which also gives the city totals. **Not** in the
+them is a retrospective construct, and it is stated in three places: under the group select
+when הדמוקרטים is the one selected, in the site card, and in `על הנתונים`, which also gives the city totals. **Not** in the
 potential legend — Round 4.3 cut that box down to the reading rule alone, and a caveat that
 costs six lines of a 190px box on a phone is exactly what it cut. Everything
 in Round 1's estimate caveat still applies on top of it.
@@ -491,8 +496,8 @@ the legend total sitting directly below it and with every number in the list. `b
 still emits `city.pot` (it is in the build log), so this is written down: do not "simplify"
 the tile back to it.
 
-**Regression checks:** `light` asserts the map opens on the camp — its legend, its header
-tile, its list figure and its name inside the target and sort controls; `pot_opp` and
-`table_opp` assert switching to `אופוזיציה רחבה` moves all of them and drops the now
-duplicate table columns; `table` / `phone_table` assert the camp's columns and the phone
-subset spending one of its six slots on the camp rather than the bloc.
+**Regression checks:** `light` asserts the map opens on the camp and pins the **full option
+list of both group selects and of the sort** — the check that would have caught the missing
+`אופוזיציה רחבה` the moment it went; `pot_opp` asserts the opposition is still one pick;
+`table` and `table_opp` assert the camp's columns are there whichever group is selected;
+`phone_table` asserts the phone's six columns spend one slot on the camp.

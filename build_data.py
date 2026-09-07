@@ -5,11 +5,9 @@ BLOCS = config.BLOCS
 CAMPS = config.CAMPS
 PARTY_NAMES = config.PARTY_NAMES
 
-# camps that are a party group of their own (not just an alias for a bloc total)
-OWN_CAMPS = [k for k, v in CAMPS.items() if v.get('parties')]
 # every key the potential is computed for: the three blocs of the partition, plus
-# each camp that is narrower than a bloc (הדמוקרטים sits inside the opposition)
-POT_KEYS = ('coalition', 'opposition', 'other', *OWN_CAMPS)
+# each camp, which is narrower than a bloc (הדמוקרטים sits inside the opposition)
+POT_KEYS = ('coalition', 'opposition', 'other', *CAMPS)
 
 raw = json.load(open('data/raw.json'))
 geo = json.load(open('data/geocache.json'))
@@ -30,8 +28,8 @@ def bloc_totals(parties):
     t['opposition'] = t['zionist_opp'] + t['arab']
     # camps with their own party list are counted here too; they overlap a bloc by
     # design (dem ⊂ opposition) and so are never subtracted from anything.
-    for k in OWN_CAMPS:
-        t[k] = sum(parties.get(p, 0) for p in CAMPS[k]['parties'])
+    for k, v in CAMPS.items():
+        t[k] = sum(parties.get(p, 0) for p in v['parties'])
     return t
 
 def potential(o):
@@ -88,7 +86,7 @@ for s in stations:
         'voters': s['voters'], 'turnout': s['turnout'], 'valid': s['valid'],
         'invalid': s['invalid'], 'non_voters': s['non_voters'], 'coalition': s['coalition'],
         'opposition': s['opposition'], 'other': s['other'], 'lead': s['lead'],
-        **{k: s[k] for k in OWN_CAMPS},
+        **{k: s[k] for k in CAMPS},
         'parties': s['parties'],
     })
 
@@ -175,7 +173,7 @@ def national_turnout():
 city['national_turnout'], _nt_src = national_turnout()
 
 payload = {'city': city, 'sites': out_sites, 'party_names': PARTY_NAMES, 'blocs': BLOCS,
-           'camps': CAMPS, 'default_camp': config.DEFAULT_CAMP}
+           'camps': CAMPS, 'default_pot_target': config.DEFAULT_POT_TARGET}
 json.dump(payload, open('data/map_data.json', 'w'), ensure_ascii=False, separators=(',', ':'))
 
 print('sites:', len(out_sites), '| kalpiot:', len(stations))
@@ -186,7 +184,7 @@ print('precision:', Counter(s['geo_precision'] for s in out_sites))
 print('co-located sites spread apart:', spread)
 print('national turnout %:', city['national_turnout'], 'from', _nt_src)
 print('city non-voters:', city['non_voters'], '| potential', city['pot'])
-for k in OWN_CAMPS:
+for k in CAMPS:
     print(f'camp {k} ({CAMPS[k]["name"]}):', city[k], 'votes |',
           round(100 * city[k] / city['valid'], 2), '% | potential', city['pot'][k],
           '| site max potential', max(s['pot'][k] for s in out_sites))

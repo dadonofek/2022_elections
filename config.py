@@ -48,31 +48,30 @@ BLOCS = {
     'arab':        ['ום', 'עם', 'ד'],
 }
 
-# --------------------------------------------- camps (whose votes the map counts)
-# A CAMP is the group the reader is counting FOR — it drives the potential metric,
-# the list, the sort and the table. It is deliberately NOT part of the bloc
-# partition above: הדמוקרטים is a subset of the broad opposition (העבודה and מרצ ran
-# as two separate lists in this election and merged into one party only in 2024), so
-# it is carried as its own total ALONGSIDE the blocs, never instead of one.
+# ------------------------------------- camps (party groups that are not blocs)
+# A CAMP is a group the map can count for that the bloc partition does not name.
+# הדמוקרטים is a subset of the broad opposition (העבודה and מרצ ran as two separate
+# lists in this election and merged into one party only in 2024), so it is carried
+# ALONGSIDE the blocs — never instead of one — and it is always present: its own
+# option in the potential-target select, header tile, sort, table columns and bars.
+# The blocs stay exactly as they were; a camp is added to the list, not swapped in.
 #
-#   'parties' — letter codes to sum. A camp WITHOUT it reuses the bloc total that
-#               already carries its key (that is how 'opposition' works).
-#   'inside'  — the bloc key this camp overlaps, so the UI can say which slice of the
-#               partition it is part of.
-#   'note'    — the one-line caveat, shown under the select, in the potential legend
-#               and in the site card. Keep it SHORT: the legend box shares a phone
-#               screen with the map.
+#   'parties'   — the letter codes to sum.
+#   'inside'    — the bloc key this camp overlaps, so the UI can say which slice of
+#                 the partition it is part of.
+#   'note'      — the one-line caveat, shown under the select and in the site card.
+#                 Keep it SHORT: the site card shares a phone screen with the map.
 #   'note_long' — the full version, shown only in the "על הנתונים" panel.
-#   'short'   — optional, for the header tile, whose label may not wrap: a name long
-#               enough to clip there is unreadable on a phone.
+#   'short'     — optional, for the header tile, whose label may not wrap.
 CAMPS = {
     'dem': {'name': 'הדמוקרטים', 'parties': ['אמת', 'מרצ'], 'inside': 'opposition',
             'note': 'העבודה ומרצ, שהתאחדו למפלגה אחת ב-2024',
             'note_long': 'העבודה ומרצ רצו ב-2022 כשתי רשימות נפרדות, ומרצ לא עברה את '
                          'אחוז החסימה; הן התאחדו למפלגה אחת ב-2024'},
-    'opposition': {'name': 'אופוזיציה רחבה', 'short': 'אופוזיציה'},
 }
-DEFAULT_CAMP = 'dem'
+# Which group the potential points at when the map opens: a camp key above, a bloc
+# ('coalition' / 'opposition' / 'other'), or 'none' for unattributed non-voters.
+DEFAULT_POT_TARGET = 'dem'
 
 PARTY_NAMES = {
     'מחל': 'הליכוד', 'שס': 'ש"ס', 'ג': 'יהדות התורה', 'ט': 'הציונות הדתית',

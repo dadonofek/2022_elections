@@ -19,22 +19,24 @@ need an internet connection.
   marker in turnout mode is a big electorate that largely stayed home. The area means
   that in **every** mode — only the marker **color** follows the selected mode, so
   switching modes never resizes the map.
-* **A camp — the map counts for someone.** `המחנה שלי` picks between
-  **הדמוקרטים** (העבודה + מרצ, the default) and **אופוזיציה רחבה**, and everything
-  directional follows it: the potential and its colour ramp, the list's headline figure,
-  the `שיעור המחנה שלי` sort, the first header tile and the table's camp columns. It is
-  **not** a fourth bloc — הדמוקרטים sits *inside* the broad opposition, so the bloc split,
-  *גוש מוביל*, *פער בין הגושים* and the filter chips keep partitioning the vote three ways
-  and the camp is shown beside them, labelled as the subset it is. It also gets a hue of its
-  own — **teal** — because a camp painted in its parent bloc's colour would say "opposition"
-  while the legend said "הדמוקרטים". הדמוקרטים did not exist
-  in 2022 (העבודה and מרצ ran separately, and מרצ missed the threshold): the sum is a
-  retrospective construct, and the UI says so wherever it appears.
+* **הדמוקרטים as a group of its own.** The `הגוש שלי` selector that picks whose non-voters
+  to count keeps all four choices it always had — nobody, the 2022 coalition, the broad
+  opposition, the other lists — and adds **הדמוקרטים** (העבודה + מרצ), which is the default.
+  Picking it points the potential, the marker colour, the list, the legend and the marker
+  card at that group. It is **not** a fourth bloc — הדמוקרטים sits *inside* the broad
+  opposition, so the bloc split, *גוש מוביל*, *פער בין הגושים* and the filter chips keep
+  partitioning the vote three ways, and the group is shown beside them, labelled as the
+  subset it is. It also gets a hue of its own — **teal** — because a group painted in its
+  parent bloc's colour would say "opposition" while the legend said "הדמוקרטים". Its header
+  tile, sort, two table columns, site-card bar and bloc-split line are always present,
+  whichever group the map is currently painting. הדמוקרטים did not exist in 2022 (העבודה and
+  מרצ ran separately, and מרצ missed the threshold): the sum is a retrospective construct,
+  and the UI says so where it is picked, in the site card and in *על הנתונים*.
 * **Five color modes** (*פוטנציאל* is the default)
   * *פוטנציאל* — how many votes are sitting at this site and did not turn up:
-    `eligible x (1 - turnout) x the group's share of the votes cast here`. A second
-    selector picks whose votes to count — `המחנה שלי` (the default), the 2022 coalition,
-    the other lists, or nobody, which shows raw non-voters.
+    `eligible x (1 - turnout) x the group's share of the votes cast here`. A
+    `הגוש שלי` selector picks whose votes to count — הדמוקרטים by default, any of the
+    three blocs, or nobody, which shows raw non-voters.
     Hue says *which* group and lightness says *how many*, while the marker area keeps
     carrying the electorate — so a large dark marker is a big electorate with a lot of
     it still on the table, and a small dark one is a small electorate that barely voted.
@@ -149,11 +151,11 @@ hold none of their own. To build the map for another city in the **same election
 5. `python3 test_map.py` to sanity-check the render.
 
 For a **different election**, also update `BLOCS`, `CAMPS` and `PARTY_NAMES` in `config.py`
-with that election's party letter codes. `CAMPS` is what the `המחנה שלי` selector offers:
-each entry names a camp and the letter codes to sum for it (a camp with no `parties` reuses
-the bloc total of the same key, which is how `אופוזיציה רחבה` is defined), and
-`DEFAULT_CAMP` is the one the map opens on. Adding or swapping a camp is a config edit —
-the front end builds the selector from the data. A camp with its own party list also needs
+with that election's party letter codes. `CAMPS` holds the groups that are not
+blocs: each entry names one, the letter codes to sum for it, the bloc it sits inside and its
+caveat. `DEFAULT_POT_TARGET` is the group the map opens on — a camp, a bloc, or `none`.
+Adding a camp is a config edit: the front end inserts its option, tile, sort, columns and
+bar from the data, and the blocs are untouched. A camp with its own party list also needs
 a `--camp-<key>` colour and a `--pot-<key>-0..4` ramp in `src_map.html` plus its bin edges
 in `POT_BINS`; validate any new ramp as described in `PRODUCT_DECISIONS.md` §5.4.
 
@@ -177,9 +179,9 @@ escaping their container, the table view covering the map, the sidebar sitting t
 right of the map under RTL, legend ramp labels running in the same direction as
 their swatches, a marker tap on a phone opening its card without leaving the map, the
 map-bar mode control staying in step with the panel's, and the marker radius not moving
-when the color mode changes. Switching the camp is checked across every surface it claims
-to drive — legend, header tile, list figure, the target and sort option labels, and the
-table's column set.
+when the color mode changes. The **full option list of both group selects and of the sort**
+is pinned, so a group can never quietly go missing, and the camp's columns are asserted
+present whichever group is selected.
 Screenshots land in `build/`.
 
 The phone scenarios assert controls are **reachable** — on screen, with real size — not

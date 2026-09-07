@@ -41,15 +41,17 @@ Address→site match confidence, carried over from the spreadsheet: 133 גבוה
 
 ## What the map does
 
-* **A camp**: `המחנה שלי` picks between **הדמוקרטים** (העבודה + מרצ — the default) and
-  **אופוזיציה רחבה**, and everything directional points at it — the potential (colour,
-  bins, legend), the list's headline figure, the `שיעור המחנה שלי` sort, the first header
-  tile and the table's camp columns. It is **not** a fourth bloc: הדמוקרטים sits inside the
-  broad opposition, so the partition-based views (bloc split, `גוש מוביל`,
+* **A camp**: `הדמוקרטים` (העבודה + מרצ) is a group the bloc partition does not name. It is
+  one more option in the `הגוש שלי` select that picks whose non-voters the potential counts
+  — beside `כל מי שלא הצביע` and the three blocs, which are all exactly as they were — and
+  it is the default (`config.DEFAULT_POT_TARGET`). It is **not** a fourth bloc: it sits
+  inside the broad opposition, so the partition-based views (bloc split, `גוש מוביל`,
   `פער בין הגושים`, the filter chips) keep using the three blocs and the camp is shown
-  beside them, labelled as a subset. Defined in `config.CAMPS` / `config.DEFAULT_CAMP`;
-  the select is built from the data, so a new camp is a config edit. See
-  `PRODUCT_DECISIONS.md` Round 5 before changing any of it.
+  beside them, labelled as a subset. Its header tile, sort, two table columns, site-card bar
+  and bloc-split line are **always present**, whichever group is selected — a camp is a
+  permanent group, not a mode. Defined in `config.CAMPS`; the front end inserts its option,
+  columns and tile from the data. See `PRODUCT_DECISIONS.md` Round 5 before changing any of
+  it — §5.2 records the shape that was tried first and why it was wrong.
 * One marker per site; marker **area** ∝ **בעלי זכות בחירה** (the electorate the site
   serves) in *every* mode — the mode changes the colour and nothing else, so a marker
   keeps its size as you switch and "big and dark" always reads as one sentence.
@@ -83,7 +85,7 @@ the valid vote, potential 10,142 — the sum of the 140 sites, which is what the
 overlaps a bloc on purpose and is never subtracted from one. **הדמוקרטים did not exist in
 2022** — העבודה and מרצ ran separately and מרצ missed the threshold; the party was formed
 from their merger in 2024, so the sum is retrospective. That caveat is in `config.CAMPS`
-(`note`) and surfaces under the camp select, in the site card and
+(`note`) and surfaces under the group select when the camp is picked, in the site card and
 in `על הנתונים`.
 
 ## Pipeline

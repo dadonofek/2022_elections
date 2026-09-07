@@ -17,27 +17,28 @@ const BLOC_LABEL = {
 const BLOC_VAR = { coalition: '--bloc-coalition', opposition: '--bloc-opposition', other: '--bloc-other' };
 const blocColor = b => cssVar(BLOC_VAR[b] || '--text-muted');
 
-// A CAMP is who the map is counting FOR — it drives the potential, the list, the
-// sort and the table. It is not a fourth bloc: הדמוקרטים (העבודה + מרצ) sits INSIDE
-// the broad opposition, so it is carried alongside the partition, never instead of
-// part of it, and the bloc split / lead / margin keep using the blocs. Defined in
-// config.py, so another election swaps the camps without touching this file.
+// A CAMP is a party group the bloc partition does not name — here הדמוקרטים
+// (העבודה + מרצ). It is NOT a fourth bloc: it sits INSIDE the broad opposition, so it
+// is carried alongside the partition and never instead of part of it, and the bloc
+// split / lead / margin keep using the blocs alone. It is always present: its own
+// option in the potential-target select, its own header tile, sort, table columns and
+// bar. Defined in config.py, so another election's camps need no change here.
 const CAMPS = DATA.camps;
 const CAMP_KEYS = Object.keys(CAMPS);
-const campName = (c = state.camp) => CAMPS[c].name;
-const campNote = (c = state.camp) => CAMPS[c].note || '';
-// the about panel has room for the full version; the legend and the site card do not
-const campNoteLong = (c = state.camp) => CAMPS[c].note_long || campNote(c);
+const isCamp = k => !!CAMPS[k];
+const campName = c => CAMPS[c].name;
+const campNote = c => CAMPS[c].note || '';
+// the about panel has room for the full version; the select and the site card do not
+const campNoteLong = c => CAMPS[c].note_long || campNote(c);
 // the header tile cannot wrap its label, so it takes the short name when there is one
-const campShort = (c = state.camp) => CAMPS[c].short || CAMPS[c].name;
-// a camp that is a bloc keeps the bloc's colour; one of its own gets --camp-<key>
-const campColor = (c = state.camp) => cssVar(BLOC_VAR[c] || `--camp-${c}`);
-const campVotes = (o, c = state.camp) => o[c];
+const campShort = c => CAMPS[c].short || CAMPS[c].name;
+const campColor = c => cssVar(`--camp-${c}`);
+const campInside = c => BLOC_LABEL[CAMPS[c].inside] || '';
 // City-wide potential is the SUM OF THE SITES, not DATA.city.pot: the city figure
 // applies one city-wide vote share to all 112,642 non-voters, while the map, the list
 // and the legend total each site by its own mix. The two differ by ~4% for a camp, and
 // the header must not print a number the legend below it contradicts.
-const cityPot = (c = state.camp) => sites.reduce((a, s) => a + s.pot[c], 0);
+const cityPot = c => sites.reduce((a, s) => a + s.pot[c], 0);
 
 // turnout ramp: one hue, light -> dark, 6 bins
 const TURNOUT_BINS = [40, 48, 55, 62, 70];      // upper edges of bins 0..4
@@ -67,15 +68,14 @@ const deltaColor = s => cssVar(DELTA_VARS[deltaIdx(deltaNat(s))]);
 // potential: eligible x (1 - turnout) x the bloc's share of the votes actually
 // cast here — i.e. the non-voters at this site, attributed by how their voting
 // neighbours voted. Hue says WHICH bloc, lightness says HOW MANY votes.
-// The target `camp` is not a fixed key: it resolves to whichever camp is selected,
-// so picking הדמוקרטים repoints the potential — and the list, sort and table with it —
-// without a second control for every camp.
-const potKey = () => (state.potTarget === 'camp' ? state.camp : state.potTarget);
+// Every group the potential can point at is a key here: the three blocs, the raw
+// non-voters, and each camp. One flat set, one select — picking הדמוקרטים costs the
+// reader nothing that picking the opposition does not.
 const POT_LABEL = {
   none: 'קולות שלא הגיעו', coalition: 'פוטנציאל קואליציה',
   opposition: 'פוטנציאל אופוזיציה', other: 'פוטנציאל רשימות אחרות',
+  ...Object.fromEntries(CAMP_KEYS.map(c => [c, `פוטנציאל ${campName(c)}`])),
 };
-const potLabel = () => (state.potTarget === 'camp' ? `פוטנציאל ${campName()}` : POT_LABEL[state.potTarget]);
 const POT_VARS = {
   none: ['--dlt-0', '--dlt-1', '--dlt-2', '--dlt-3', '--dlt-4'],
   coalition: ['--pot-coal-0', '--pot-coal-1', '--pot-coal-2', '--pot-coal-3', '--pot-coal-4'],
@@ -92,11 +92,11 @@ const POT_BINS = {
   opposition: [100, 250, 450, 700], other: [10, 25, 45, 70],
   dem: [50, 100, 175, 260],
 };
-const potValue = s => (potKey() === 'none' ? s.non_voters : s.pot[potKey()]);
+const potValue = s => (state.potTarget === 'none' ? s.non_voters : s.pot[state.potTarget]);
 const potColor = s => {
-  const k = potKey(), b = POT_BINS[k]; const v = potValue(s);
+  const b = POT_BINS[state.potTarget]; const v = potValue(s);
   let i = 0; while (i < b.length && v >= b[i]) i++;
-  return cssVar(POT_VARS[k][i]);
+  return cssVar(POT_VARS[state.potTarget][i]);
 };
 
 const colorOf = s => state.mode === 'lead' ? blocColor(s.lead)
@@ -128,10 +128,9 @@ const signed = (n, d = 1) => (n > 0 ? '+' : '') + n.toFixed(d).replace(/\.0$/, '
 // ---------------------------------------------------------------- state
 const state = {
   mode: 'potential',
-  // the map is a campaign tool for a camp, so it opens on that camp's potential
-  // rather than on the unattributed non-voter count
-  camp: DATA.default_camp,
-  potTarget: 'camp',
+  // the map opens on the group config names, not on the unattributed non-voter
+  // count: it is a campaign tool, and DEFAULT_POT_TARGET says whose campaign
+  potTarget: DATA.default_pot_target,
   q: '',
   turnoutMin: 0,
   turnoutMax: 100,
@@ -166,7 +165,10 @@ const SORTS = {
   turnout_asc: (a, b) => a.turnout - b.turnout,
   voters_desc: (a, b) => b.voters - a.voters,
   coal_desc: (a, b) => share(b.coalition, b.valid) - share(a.coalition, a.valid),
-  camp_desc: (a, b) => share(campVotes(b), b.valid) - share(campVotes(a), a.valid),
+  opp_desc: (a, b) => share(b.opposition, b.valid) - share(a.opposition, a.valid),
+  // one "share of X" sort per camp, beside the blocs' own
+  ...Object.fromEntries(CAMP_KEYS.map(c =>
+    [`${c}_desc`, (a, b) => share(b[c], b.valid) - share(a[c], a.valid)])),
 };
 
 // ---------------------------------------------------------------- map
@@ -196,7 +198,7 @@ function tipHtml(s) {
   return `<b>${esc(s.name)}</b>
     <div class="r"><span>${esc(addressOf(s))}</span></div>
     <div class="r"><span>הצבעה ${pct(s.turnout)}</span><span>${signed(deltaNat(s))} מהארצי</span><span>${s.n_kalpi} קלפיות</span></div>
-    <div class="r"><span>${potLabel()}: ${num(potValue(s))}</span><span>מתוך ${num(s.eligible)} בעלי זכות</span></div>
+    <div class="r"><span>${POT_LABEL[state.potTarget]}: ${num(potValue(s))}</span><span>מתוך ${num(s.eligible)} בעלי זכות</span></div>
     <div class="lead"><span class="dot" style="background:${blocColor(s.lead)}"></span>
       <span>מוביל: ${BLOC_LABEL[s.lead]} · ${pct(share(s[s.lead], s.valid))}</span></div>`;
 }
@@ -209,7 +211,7 @@ function cardHtml(s) {
   return `<div class="mcard">
     <b>${esc(s.name)}</b>
     <div class="ad">${esc(addressOf(s))} · ${s.n_kalpi} קלפיות</div>
-    <div class="row"><span>${potLabel()}</span><span class="v">${num(potValue(s))}</span></div>
+    <div class="row"><span>${POT_LABEL[state.potTarget]}</span><span class="v">${num(potValue(s))}</span></div>
     <div class="row"><span>אחוז הצבעה</span><span class="v">${pct(s.turnout)}
       <span class="muted" style="font-weight:400">${signed(deltaNat(s))} מהארצי</span></span></div>
     <div class="row"><span>גוש מוביל</span><span class="v">
@@ -316,7 +318,7 @@ function renderStats() {
   // first three ride along on mobile; the rest wait behind "עוד". The camp's own
   // potential leads: it is the number this map exists to hand a campaign.
   const tiles = [
-    [`פוטנציאל ${campShort()}`, num(cityPot())],
+    ...CAMP_KEYS.map(c => [`פוטנציאל ${campShort(c)}`, num(cityPot(c))]),
     ['קולות שלא הגיעו', num(c.non_voters)],
     ['אחוז הצבעה', pct(c.turnout)],
     ['פער מהארצי', signed(c.turnout - c.national_turnout)],
@@ -352,8 +354,8 @@ function renderLegend() {
       <p class="legend-note">הבסיס הוא אחוז ההצבעה הארצי בבחירות אלה (${pct(NAT)}), לא ממוצע העיר
          (${pct(DATA.city.turnout)}). ${n} מתוך ${vis.length} אתרים בתצוגה מגיעים לממוצע הארצי.</p>` + sizeLegend();
   } else if (state.mode === 'potential') {
-    const b = POT_BINS[potKey()], vars = POT_VARS[potKey()];
-    el.innerHTML = `<h3>${potLabel()}</h3>
+    const b = POT_BINS[state.potTarget], vars = POT_VARS[state.potTarget];
+    el.innerHTML = `<h3>${POT_LABEL[state.potTarget]}</h3>
       <div class="ramp">${vars.map(v => `<span style="background:${cssVar(v)}"></span>`).join('')}</div>
       <div class="ramp-labels"><span>עד ${num(b[0])}</span><span>${num(b[1])}</span><span>${num(b[b.length - 1])}+</span></div>
       <p class="legend-note">סמן גדול וכהה = ציבור בוחרים גדול שהרבה ממנו לא הגיע לקלפי
@@ -383,7 +385,7 @@ function renderList() {
         <span class="nm">${esc(s.name)}</span>
         <span class="pill" style="margin-inline-start:auto">${s.n_kalpi} קלפיות</span></div>
       <div class="ad">${esc(addressOf(s))}</div>
-      <div class="m"><span><b>${num(potValue(s))}</b> ${potLabel()}</span>
+      <div class="m"><span><b>${num(potValue(s))}</b> ${POT_LABEL[state.potTarget]}</span>
         <span>הצבעה ${pct(s.turnout)}</span><span>${signed(deltaNat(s))} מהארצי</span></div>
     </button>`).join('');
   $$('.site', el).forEach(b => b.addEventListener('click', () => selectSite(+b.dataset.id, true)));
@@ -399,32 +401,25 @@ function blocStack(o) {
       `<span class="i"><span class="dot" style="background:${blocColor(k)}"></span><span class="lbl">${BLOC_LABEL[k]}</span><span class="pc">${pct(share(v, t))}</span><span class="abs">${num(v)}</span></span>`).join('')}</div>`;
 }
 
-// The three blocs partition the vote, so they are always the bars. A camp that is
-// not one of them (הדמוקרטים, inside the opposition) is appended as a fourth bar
-// and says so in its label — it overlaps the bar above it and must not read as a
-// fourth slice of the same pie. Bar widths stay scaled to the largest BLOC, so the
-// camp's bar is visibly the part of the opposition's that it is.
-const potBarKeys = () => ['coalition', 'opposition', 'other'].concat(BLOC_VAR[state.camp] ? [] : [state.camp]);
-const campInside = (c = state.camp) => BLOC_LABEL[CAMPS[c].inside] || '';
-// The label stays the bare name — spelling the overlap out on every bar wrapped it to
-// three lines. The sentence under the bars carries it once, for the one bar that needs it.
+// The three blocs partition the vote, so they are always the bars. Each camp is
+// appended after them: it overlaps the bar above it and must not read as a fourth
+// slice of the same pie, so the sentence under the bars says so and the widths stay
+// scaled to the largest BLOC — the camp's bar is visibly the part of one that it is.
+const potBarKeys = () => ['coalition', 'opposition', 'other', ...CAMP_KEYS];
 const potBarLabel = b => BLOC_LABEL[b] || campName(b);
-const campOverlapNote = () => (BLOC_VAR[state.camp] ? ''
-  : ` ${campName()} נכללים גם בשורת ${campInside()} שמעליהם, ולכן הסכום כאן גדול ממספר מי שלא הצביעו.`);
 const potBarColor = b => (BLOC_VAR[b] ? blocColor(b) : campColor(b));
+const campOverlapNote = () => CAMP_KEYS.map(c =>
+  ` ${campName(c)} נכללים גם בשורת ${campInside(c)} שמעליהם, ולכן הסכום כאן גדול ממספר מי שלא הצביעו.`).join('');
 
-// The stack above shows the partition; a camp inside one of its slices needs its own
-// line, or its number is nowhere in the site card. Only shown for a camp that is not
-// itself a bloc — for אופוזיציה רחבה the stack already says it.
+// The stack above shows the partition; a camp sits inside one of its slices, so it
+// needs its own line or its number is nowhere in the site card.
 function campLine(s) {
-  if (BLOC_VAR[state.camp]) return '';
-  const v = campVotes(s);
-  return `<div class="stack-key" style="margin-top:6px">
-    <span class="i"><span class="dot" style="background:${campColor()}"></span>
-      <span class="lbl">${campName()}</span><span class="pc">${pct(share(v, s.valid))}</span>
-      <span class="abs">${num(v)}</span></span></div>
-    <p class="legend-note" style="margin:4px 0 0">${esc(campNote())} — הקולות כלולים גם בשורת ${campInside()} שלמעלה.
-       פוטנציאל באתר: <b>${num(s.pot[state.camp])}</b> קולות.</p>`;
+  return CAMP_KEYS.map(c => `<div class="stack-key" style="margin-top:6px">
+    <span class="i"><span class="dot" style="background:${campColor(c)}"></span>
+      <span class="lbl">${campName(c)}</span><span class="pc">${pct(share(s[c], s.valid))}</span>
+      <span class="abs">${num(s[c])}</span></span></div>
+    <p class="legend-note" style="margin:4px 0 0">${esc(campNote(c))} — הקולות כלולים גם בשורת ${campInside(c)} שלמעלה.
+       פוטנציאל באתר: <b>${num(s.pot[c])}</b> קולות.</p>`).join('');
 }
 
 function renderDetail(s) {
@@ -561,21 +556,19 @@ function renderAbout() {
       <li><b>אופוזיציה רחבה</b>: ${names('zionist_opp')}; ${names('arab')}</li>
       <li><b>רשימות אחרות</b>: כל שאר הרשימות שקיבלו קולות בעיר.</li>
     </ul>
-    <h3>המחנה שלי — ומה זה אומר על ${esc(campName())}</h3>
-    <p>"המחנה שלי" הוא מי שהמפה סופרת עבורו: הוא קובע את הפוטנציאל שנצבע על המפה, את המספר
-       שברשימה, את המיון ואת עמודות הטבלה. אפשר לבחור בין
-       ${CAMP_KEYS.map(c => `<b>${esc(CAMPS[c].name)}</b>`).join(' לבין ')}, וברירת המחדל היא
-       <b>${esc(campName(DATA.default_camp))}</b>.</p>
-    ${CAMP_KEYS.filter(c => CAMPS[c].parties).map(c => {
-      const v = campVotes(DATA.city, c);
-      return `<p><b>${esc(CAMPS[c].name)}</b> כאן הם סכום הקולות של
+    <h3>${CAMP_KEYS.map(c => esc(campName(c))).join(' · ')} — קבוצה שאינה גוש</h3>
+    <p>מלבד שלושת הגושים אפשר לכוון את הפוטנציאל גם לקבוצה שהחלוקה לגושים לא נותנת לה שם.
+       היא נבחרת באותה רשימה כמו הגושים, והיא ברירת המחדל של המפה.</p>
+    ${CAMP_KEYS.map(c => {
+      const v = DATA.city[c];
+      return `<p><b>${esc(campName(c))}</b> כאן הם סכום הקולות של
         ${CAMPS[c].parties.map(k => `${partyName(k)} (${k})`).join(' ו')}:
         ${num(v)} קולות בחיפה, ${pct(share(v, DATA.city.valid))} מהקולות הכשרים,
         ופוטנציאל של ${num(cityPot(c))} קולות נוספים (סכום הפוטנציאל של 140 האתרים).</p>
-      <p class="muted"><b>שימו לב:</b> ${esc(campNoteLong(c))} — כלומר הסכום כאן הוא בנייה בדיעבד
-         של המחנה, לא רשימה שהופיעה על פתק ההצבעה.
+      <p class="muted"><b>שימו לב:</b> ${esc(campNoteLong(c))} — כלומר הסכום כאן הוא בנייה בדיעבד,
+         לא רשימה שהופיעה על פתק ההצבעה.
          הקולות האלה כלולים גם ב"${esc(campInside(c))}", ולכן הגושים במפה ממשיכים לחלק את הקולות
-         ביניהם בלי המחנה: הוא מוצג לצידם, לא במקומם.</p>`;
+         ביניהם בלי הקבוצה הזאת: היא מוצגת לצידם, לא במקומם.</p>`;
     }).join('')}
     <p>השיעורים מחושבים מתוך הקולות הכשרים. "פער בין הגושים" הוא שיעור קואליציית 2022 פחות שיעור האופוזיציה הרחבה.</p>
     <h3>מגבלות</h3>
@@ -600,14 +593,14 @@ const SITE_COLS = [
   ['dnat', 'פער מהארצי', s => signed(deltaNat(s)), s => deltaNat(s)],
   ['dcity', 'פער מחיפה', s => signed(deltaCity(s)), s => deltaCity(s)],
   ['nonv', 'לא הצביעו', s => num(s.non_voters), s => s.non_voters],
-  ['potcamp', () => `פוטנציאל ${campName()}`, s => num(s.pot[state.camp]), s => s.pot[state.camp]],
   ['potc', 'פוטנציאל קואליציה', s => num(s.pot.coalition), s => s.pot.coalition],
   ['poto', 'פוטנציאל אופוזיציה', s => num(s.pot.opposition), s => s.pot.opposition],
+  ...CAMP_KEYS.map(c => [`pot_${c}`, `פוטנציאל ${campName(c)}`, s => num(s.pot[c]), s => s.pot[c]]),
   ['valid', 'כשרים', s => num(s.valid), s => s.valid],
   ['invalid', 'פסולים', s => num(s.invalid), s => s.invalid],
   ['coal', 'קואליציית 2022', s => pct(share(s.coalition, s.valid)), s => share(s.coalition, s.valid)],
   ['opp', 'אופוזיציה רחבה', s => pct(share(s.opposition, s.valid)), s => share(s.opposition, s.valid)],
-  ['campshare', () => campName(), s => pct(share(campVotes(s), s.valid)), s => share(campVotes(s), s.valid)],
+  ...CAMP_KEYS.map(c => [c, campName(c), s => pct(share(s[c], s.valid)), s => share(s[c], s.valid)]),
   ['oth', 'רשימות אחרות', s => pct(share(s.other, s.valid)), s => share(s.other, s.valid)],
   ['lead', 'גוש מוביל', s => `<span class="dot" style="background:${blocColor(s.lead)};display:inline-block"></span> ${BLOC_LABEL[s.lead]}`, s => s.lead],
   ['lat', 'קו רוחב', s => s.lat?.toFixed(5) ?? '—', s => s.lat ?? 0],
@@ -627,27 +620,22 @@ const KALPI_COLS = [
   ['invalid', 'פסולים', k => num(k.invalid), k => k.invalid],
   ['coal', 'קואליציית 2022', k => pct(share(k.coalition, k.valid)), k => share(k.coalition, k.valid)],
   ['opp', 'אופוזיציה רחבה', k => pct(share(k.opposition, k.valid)), k => share(k.opposition, k.valid)],
-  ['campshare', () => campName(), k => pct(share(campVotes(k), k.valid)), k => share(campVotes(k), k.valid)],
+  ...CAMP_KEYS.map(c => [c, campName(c), k => pct(share(k[c], k.valid)), k => share(k[c], k.valid)]),
   ['lead', 'גוש מוביל', k => `<span class="dot" style="background:${blocColor(k.lead)};display:inline-block"></span> ${BLOC_LABEL[k.lead]}`, k => k.lead],
 ];
 // A 15-column nowrap table is unreadable on a phone; keep the columns that carry
-// the story and let the full set come back on a wider screen. The camp's own
-// potential takes the slot the opposition's had — that is the column the reader
-// picked a camp to see.
-const MOBILE_KEYS = ['name', 'turnout', 'dnat', 'nonv', 'potc', 'potcamp'];
-// The camp columns are duplicates when the camp IS a bloc (אופוזיציה רחבה already
-// has its own two), so they are dropped in that case rather than printed twice.
-const tableCols = cols => cols.filter(c => !(c[0].startsWith('camp') || c[0] === 'potcamp') || !BLOC_VAR[state.camp])
-  .map(c => (typeof c[1] === 'function' ? [c[0], c[1](), c[2], c[3]] : c));
+// the story and let the full set come back on a wider screen. The camps take the
+// coalition's slot: a reader on a phone wants their own group beside the bloc it
+// sits in, and six columns is the ceiling.
+const MOBILE_KEYS = ['name', 'turnout', 'dnat', 'nonv', ...CAMP_KEYS.map(c => `pot_${c}`), 'poto'];
 const isNarrow = () => matchMedia('(max-width:1000px)').matches;
 
 function renderTable() {
   const site = state.tableLevel === 'site';
-  const allCols = tableCols(site ? SITE_COLS : KALPI_COLS);
+  const allCols = site ? SITE_COLS : KALPI_COLS;
   let cols = allCols;
   if (isNarrow()) {
-    const keys = MOBILE_KEYS.map(k => (k === 'potcamp' && BLOC_VAR[state.camp] ? 'poto' : k));
-    const sub = cols.filter(c => keys.includes(c[0]));
+    const sub = cols.filter(c => MOBILE_KEYS.includes(c[0]));
     if (sub.length) cols = sub;
   }
   const visIds = new Set(visible().map(s => s.id));
@@ -687,27 +675,22 @@ function setPotTarget(t) {
   state.potTarget = t;
   $('#potTarget').value = t;
   $('#mapPotTarget').value = t;
+  // a camp needs its caveat where it is picked; a bloc carries none
+  $('#potNote').textContent = isCamp(t) ? campNote(t) : '';
   renderAll();
 }
-// The camp is the one control that repoints the whole map: the potential target
-// named "המחנה שלי", the list figure, the camp sort, the camp table columns, the
-// header tile and the site card all read state.camp, so they all move together and
-// nothing has to be re-picked after switching.
-function setCamp(c) {
-  state.camp = c;
-  $('#camp').value = c;
-  $('#campNote').textContent = campNote();
-  // the two target selects and the sort name the camp rather than repeating the list
-  $$('#potTarget option[value="camp"], #mapPotTarget option[value="camp"]')
-    .forEach(o => { o.textContent = campName(); });
-  $('#sort option[value="camp_desc"]').textContent = `שיעור ${campName()}`;
-  renderStats();
-  renderAll();
-  if (state.selected != null) renderDetail(sites.find(s => s.id === state.selected));
+// A camp is not in the static markup — it comes from config, so its options are
+// inserted into the two group selects and the sort at start-up. Right after
+// "everyone who did not vote", so the reader's own group is the first real choice.
+function injectCampOptions() {
+  for (const sel of ['#potTarget', '#mapPotTarget']) {
+    const el = $(sel);
+    CAMP_KEYS.forEach((c, i) => el.add(new Option(campName(c), c), 1 + i));
+  }
+  const sort = $('#sort');
+  const at = [...sort.options].findIndex(o => o.value === 'opp_desc') + 1;
+  CAMP_KEYS.forEach((c, i) => sort.add(new Option(`שיעור ${campName(c)}`, `${c}_desc`), at + i));
 }
-$('#camp').innerHTML = CAMP_KEYS.map(c =>
-  `<option value="${c}">${esc(CAMPS[c].name)}</option>`).join('');
-$('#camp').addEventListener('change', e => setCamp(e.target.value));
 $('#modeSeg').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   setMode(b.dataset.mode);
@@ -835,10 +818,10 @@ function fitAll() {
 setTiles();
 renderStats();
 buildMarkers();
-// the controls start on whatever `state` declares above, not on whatever option the
-// markup happens to list first
+// the camps join the selects before anything reads their value, and the controls
+// start on whatever `state` declares above, not on whatever option the markup lists first
+injectCampOptions();
 setPotTarget(state.potTarget);
-setCamp(state.camp);
 renderLegend();
 renderList();
 fitAll();

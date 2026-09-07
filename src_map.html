@@ -442,15 +442,6 @@ table.full tbody tr:hover{background:var(--surface-2)}
       <details class="filters" id="filters" open>
         <summary>סינון וצביעה <span class="sum" id="filtSummary"></span></summary>
         <div class="panel">
-          <h2>המחנה שלי</h2>
-          <div class="field" id="campField">
-            <label class="lab" for="camp">עבור מי המפה סופרת</label>
-            <select id="camp"></select>
-            <p class="legend-note" id="campNote" style="margin:4px 0 0"></p>
-          </div>
-        </div>
-
-        <div class="panel">
           <h2>צביעת הסמנים</h2>
           <div class="seg grid3" id="modeSeg" role="group" aria-label="בחירת צביעה">
             <button data-mode="potential" aria-pressed="true">פוטנציאל</button>
@@ -460,13 +451,14 @@ table.full tbody tr:hover{background:var(--surface-2)}
             <button data-mode="margin" aria-pressed="false">פער בין הגושים</button>
           </div>
           <div class="field" id="potTargetField" style="margin-top:10px">
-            <label class="lab" for="potTarget">למי לשייך את הקולות שלא הגיעו</label>
+            <label class="lab" for="potTarget">הגוש שלי — למי שייכים הקולות שלא הגיעו</label>
             <select id="potTarget">
               <option value="none">כל מי שלא הצביע (ללא שיוך)</option>
-              <option value="camp">המחנה שלי</option>
               <option value="coalition">קואליציית 2022</option>
+              <option value="opposition">אופוזיציה רחבה</option>
               <option value="other">רשימות אחרות</option>
             </select>
+            <p class="legend-note" id="potNote" style="margin:4px 0 0"></p>
           </div>
         </div>
 
@@ -498,7 +490,7 @@ table.full tbody tr:hover{background:var(--surface-2)}
           <option value="turnout_desc">אחוז הצבעה — מהגבוה</option>
           <option value="voters_desc">מספר מצביעים</option>
           <option value="coal_desc">שיעור קואליציה 2022</option>
-          <option value="camp_desc">שיעור המחנה שלי</option>
+          <option value="opp_desc">שיעור אופוזיציה רחבה</option>
           <option value="kalpi">לפי מספר קלפי</option>
         </select>
       </div>
@@ -517,10 +509,10 @@ table.full tbody tr:hover{background:var(--surface-2)}
           <option value="lead">צביעה: גוש מוביל</option>
           <option value="margin">צביעה: פער בין הגושים</option>
         </select>
-        <select id="mapPotTarget" class="mapctl" aria-label="למי שייכים הקולות שלא הגיעו">
+        <select id="mapPotTarget" class="mapctl" aria-label="הגוש שלי">
           <option value="none">כל מי שלא הצביע</option>
-          <option value="camp">המחנה שלי</option>
           <option value="coalition">קואליציית 2022</option>
+          <option value="opposition">אופוזיציה רחבה</option>
           <option value="other">רשימות אחרות</option>
         </select>
         <button class="btn" id="btnReset">מבט על כל העיר</button>

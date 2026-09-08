@@ -20,7 +20,11 @@ def nominatim(params):
     return []
 
 HONORIFICS = ['ד"ר', 'דר\'', 'הרב', 'פרופ\'', 'פרופ']
-SPELL = {'הגבורים': 'הגיבורים', 'הקבוצים': 'הקיבוצים', 'קריית': 'קרית', 'הציונות': 'הציונות'}
+SPELL = {
+    'הגבורים': 'הגיבורים', 'הקבוצים': 'הקיבוצים',
+    'קריית': 'קרית', 'הציונות': 'הציונות',
+    'איידלשטיין': 'אדלשטיין',
+}
 
 def variants(street):
     out = []
@@ -35,6 +39,13 @@ def variants(street):
     base = s
     for h in HONORIFICS: base = base.replace(h, '')
     base = re.sub(r'\s+', ' ', base).strip()
+    # The CEC file sometimes preserves abbreviations/punctuation that OSM omits,
+    # e.g. "סמ ויצ\"ו" versus the OSM street name "ויצו".
+    plain = base.replace('"', '').replace('״', '')
+    add(plain)
+    if plain.startswith('סמ '):
+        add(plain[3:])
+        add('סמטת ' + plain[3:])
     toks = base.split()
     if len(toks) == 2: add(toks[1] + ' ' + toks[0])          # surname-first -> given-first
     for a, b in SPELL.items():

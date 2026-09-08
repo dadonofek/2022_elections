@@ -1,0 +1,398 @@
+{
+ "אביי 21": {
+  "lat": 31.7073269,
+  "lon": 34.9709989,
+  "display": "21, אביי, דובב מישרים, רמת בית שמש ד', בית שמש, נפת ירושלים, מחוז ירושלים, 9920828, ישראל",
+  "osm_type": "yes",
+  "addresstype": "building",
+  "precision": "house",
+  "query_stage": 0
+ },
+ "אחיה השילוני 9": {
+  "lat": 31.7050537,
+  "lon": 34.9791079,
+  "display": "אחיה השילוני, קריית אבי עזרי, רמת בית שמש ג, בית שמש, נפת ירושלים, מחוז ירושלים, 9920828, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "אמרי נועם 1": {
+  "lat": 31.7064523,
+  "lon": 34.987704,
+  "display": "אמרי נועם, קריית אבי עזרי, רמת בית שמש ג, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "בן אליעזר 7": {
+  "lat": 31.7414212,
+  "lon": 34.9830423,
+  "display": "בן אליעזר, קרית בן אליעזר, קרית אריה שיינפלד, רמת בית שמש ב', בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "בן זאב יהודה 3": {
+  "lat": 31.7427617,
+  "lon": 34.9895114,
+  "display": "שדרות יהודה בן זאב, נווה ספיר, קרית אריה שיינפלד, רמת בית שמש ב', בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "secondary",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "בן עזאי 12": {
+  "lat": 31.7375644,
+  "lon": 34.9989208,
+  "display": "בן עזאי, יפה נוף, ממזרח שמש, רמת בית שמש ב', בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "בני דן 2": {
+  "lat": 31.7503454,
+  "lon": 34.9833538,
+  "display": "בני דן, רמת לח\"י, רמת משה - בית שמש הוותיקה, בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "בעל הסולם 3": {
+  "lat": 31.7185191,
+  "lon": 34.98039,
+  "display": "בעל הסולם, רמת אברהם, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "tertiary",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "דרך רבין יצחק 21": {
+  "lat": 31.747772,
+  "lon": 34.994318,
+  "display": "דרך יצחק רבין/החרמון, יצחק רבין, רמת משה - בית שמש הוותיקה, רמת בית שמש ב', בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "bus_stop",
+  "addresstype": "highway",
+  "precision": "street",
+  "query_stage": 2
+ },
+ "האדמו\"ר מבעלזא 2": {
+  "lat": 31.7317773,
+  "lon": 34.9914504,
+  "display": "האדמו\"ר מבעלזא, קרית הרמ\"א, רמת בית שמש ב, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "הגולן 16": {
+  "lat": 31.7445088,
+  "lon": 34.9921203,
+  "display": "הגולן, רמת משה - בית שמש הוותיקה, רמת בית שמש ב', בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "הגולן 16 א": {
+  "lat": 31.7445088,
+  "lon": 34.9921203,
+  "display": "הגולן, רמת משה - בית שמש הוותיקה, רמת בית שמש ב', בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "הגפן 32": {
+  "lat": 31.7463834,
+  "lon": 34.9880278,
+  "display": "הגפן, רמת לח\"י, רמת משה - בית שמש הוותיקה, בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "המעפילים 2": {
+  "lat": 31.7504567,
+  "lon": 34.9859103,
+  "display": "המעפילים, רמת לח\"י, רמת משה - בית שמש הוותיקה, בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "הנורית 16": {
+  "lat": 31.7383591,
+  "lon": 34.980076,
+  "display": "הנורית, גבעת שרת, רמת בית שמש ב', בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "הנרקיס 140": {
+  "lat": 31.7385797,
+  "lon": 34.9756706,
+  "display": "הנרקיס, נופי אביב, גבעת שרת, אזור תעשיה ברוש מערב, בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "הרב איידלשטיין 8": {
+  "lat": 31.7187114,
+  "lon": 34.9834843,
+  "display": "הרב יעקב אדלשטיין, רמת אברהם, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "query_stage": 14,
+  "query_used": "{'street': '8 אדלשטיין', 'city': 'בית שמש', 'country': 'ישראל'}"
+ },
+ "הרב הרצוג 51": {
+  "lat": 31.7377137,
+  "lon": 35.0011451,
+  "display": "שדרות הרב הרצוג, יפה נוף, ממזרח שמש, רמת בית שמש ב', בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "secondary",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "הרב קוק 7": {
+  "lat": 31.7136614,
+  "lon": 35.0024028,
+  "display": "הרב קוק, המשקפיים, רמת בית שמש א, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "tertiary",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "הרצל": {
+  "lat": 31.7491853,
+  "lon": 34.9931463,
+  "display": "הרצל, רמת משה - בית שמש הוותיקה, בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "tertiary",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "הרקפת 59": {
+  "lat": 31.7377294,
+  "lon": 34.9771099,
+  "display": "הרקפת, נופי אביב, גבעת שרת, רמת בית שמש ב', בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "tertiary",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "יואל הנביא 5": {
+  "lat": 31.7055531,
+  "lon": 34.9825759,
+  "display": "5, יואל הנביא, קריית אבי עזרי, רמת בית שמש ג, בית שמש, נפת ירושלים, מחוז ירושלים, 9920828, ישראל",
+  "osm_type": "house",
+  "addresstype": "place",
+  "precision": "house",
+  "query_stage": 0
+ },
+ "יונה בן אמיתי 4": {
+  "lat": 31.7055046,
+  "lon": 34.9871331,
+  "display": "יונה בן אמיתי, קריית אבי עזרי, רמת בית שמש ג, בית שמש, נפת ירושלים, מחוז ירושלים, 9920828, ישראל",
+  "osm_type": "tertiary",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "מר עוקבא": {
+  "lat": 31.7081164,
+  "lon": 34.9669994,
+  "display": "מר עוקבא, רמת עזרא, רמת בית שמש ד', בית שמש, נפת ירושלים, מחוז ירושלים, 9920828, ישראל",
+  "osm_type": "tertiary",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "מרים הנביאה 15": {
+  "lat": 31.7017559,
+  "lon": 34.9931986,
+  "display": "15, מרים הנביאה, חזון עובדיה, רמת בית שמש ג, בית שמש, נפת ירושלים, מחוז ירושלים, 9965217, ישראל",
+  "osm_type": "place_of_worship",
+  "addresstype": "amenity",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "נהר הירקון 40": {
+  "lat": 31.70872,
+  "lon": 34.9930061,
+  "display": "בית ספר מגן הלב, 40, שדרות נהר הירקון, שז\"ר, רמת בית שמש א, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "school",
+  "addresstype": "building",
+  "precision": "house",
+  "query_stage": 0
+ },
+ "נחל גילה 10": {
+  "lat": 31.7101131,
+  "lon": 34.9933818,
+  "display": "נחל גילה, יצחק בן צבי, שז\"ר, רמת בית שמש א, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "נחל דולב 14": {
+  "lat": 31.712653,
+  "lon": 34.9995402,
+  "display": "נחל דולב, חיים ויצמן, רמת בית שמש א, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "נחל דולב 16": {
+  "lat": 31.7152569,
+  "lon": 34.995299,
+  "display": "ישיבת/אולפנת אהבת ישראל, 16, נחל דולב, חיים ויצמן, רמת בית שמש א, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "school",
+  "addresstype": "amenity",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "נחל עין גדי 39": {
+  "lat": 31.7141249,
+  "lon": 34.9846117,
+  "display": "נחל עין גדי, שז\"ר, רמת בית שמש א, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "נחל עין גדי 56": {
+  "lat": 31.7141249,
+  "lon": 34.9846117,
+  "display": "נחל עין גדי, שז\"ר, רמת בית שמש א, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "נחל רפאים 17": {
+  "lat": 31.7091664,
+  "lon": 34.9977724,
+  "display": "17, נחל רפאים, חיים ויצמן, רמת בית שמש א, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "yes",
+  "addresstype": "building",
+  "precision": "house",
+  "query_stage": 0
+ },
+ "נחל שורק 13": {
+  "lat": 31.714013,
+  "lon": 34.9953086,
+  "display": "נחל שורק, יצחק בן צבי, שז\"ר, רמת בית שמש א, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "tertiary",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "נחל שורק 15": {
+  "lat": 31.7150406,
+  "lon": 34.9904631,
+  "display": "נחל שורק, יצחק בן צבי, שז\"ר, רמת בית שמש א, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "tertiary",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "נחל שורק 8": {
+  "lat": 31.7150406,
+  "lon": 34.9904631,
+  "display": "נחל שורק, יצחק בן צבי, שז\"ר, רמת בית שמש א, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "tertiary",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "סמ ויצ\"ו 16": {
+  "lat": 31.7486131,
+  "lon": 34.9854919,
+  "display": "ויצו, רמת לח\"י, רמת משה - בית שמש הוותיקה, בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "query_stage": 14,
+  "query_used": "{'street': '16 ויצו', 'city': 'בית שמש', 'country': 'ישראל'}"
+ },
+ "עלית הנוער 2": {
+  "lat": 31.7463335,
+  "lon": 34.991815,
+  "display": "עליית הנוער, רמת משה - בית שמש הוותיקה, רמת בית שמש ב', בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "רבי מאיר בעל הנס 6": {
+  "lat": 31.7259042,
+  "lon": 34.9939936,
+  "display": "6, רבי מאיר בעל הנס, רמת בית שמש ב, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "yes",
+  "addresstype": "building",
+  "precision": "house",
+  "query_stage": 0
+ },
+ "רבי מאיר בעל הנס 8": {
+  "lat": 31.7260651,
+  "lon": 34.9931682,
+  "display": "8, רבי מאיר בעל הנס, רמת בית שמש ב, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "yes",
+  "addresstype": "building",
+  "precision": "house",
+  "query_stage": 0
+ },
+ "רבי צדקה יהודה 10": {
+  "lat": 31.7446517,
+  "lon": 34.9992281,
+  "display": "רבי יהודה צדקה, קנה בושם, רמת בית שמש ב', בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "רביצקי 1": {
+  "lat": 31.7517596,
+  "lon": 34.9942989,
+  "display": "רביצקי, רמת משה - בית שמש הוותיקה, בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "רבנו חיים הלוי 1": {
+  "lat": 31.7412585,
+  "lon": 34.9962139,
+  "display": "1, רבנו חיים הלוי, בית ומנוחה, הקריה החרדית, רמת בית שמש ב', בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "apartments",
+  "addresstype": "building",
+  "precision": "house",
+  "query_stage": 0
+ },
+ "רזיאל דוד": {
+  "lat": 31.7426436,
+  "lon": 34.9834367,
+  "display": "דוד רזיאל, קרית בן אליעזר, קרית אריה שיינפלד, רמת בית שמש ב', בית שמש, נפת ירושלים, מחוז ירושלים, 9901312, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ },
+ "ריב\"ל 37": {
+  "lat": 31.7234829,
+  "lon": 34.9913682,
+  "display": "ריב\"ל, רמת בית שמש ב, בית שמש, נפת ירושלים, מחוז ירושלים, 9962175, ישראל",
+  "osm_type": "residential",
+  "addresstype": "road",
+  "precision": "street",
+  "query_stage": 0
+ }
+}

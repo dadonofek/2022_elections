@@ -20,15 +20,13 @@ One pipeline, one front end, one city per built file. Cities are entries in
 | city | slug | stations | sites | eligible | turnout | map |
 |---|---|---|---|---|---|---|
 | חיפה | `haifa` | 424 | 140 | 253,292 | 55.53% | `haifa_polling_map.html` ✅ built |
-| בית שמש | `beit_shemesh` | 133 | 44 | 78,064 | 66.13% | `beit_shemesh_polling_map.html` — **not built yet** |
+| בית שמש | `beit_shemesh` | 133 | 44 | 78,064 | 66.13% | `beit_shemesh_polling_map.html` ✅ built |
 
-Beit Shemesh has its stations, sites, names and addresses (`data/beit_shemesh/raw.json`,
-straight from the two official files — see Provenance). What it does not have is
-coordinates: stage 2 needs `nominatim.openstreetmap.org` and stage 5 needs
-`overpass-api.de`, and neither was reachable from the machine the data was prepared on.
-Run `CITY=beit_shemesh ./build.sh` anywhere with plain internet access and it completes —
-44 addresses, a few minutes at Nominatim's 1 req/s. Stage 6 refuses to emit a map while
-any site is missing coordinates, so a half-geocoded run cannot ship by accident.
+Beit Shemesh is fully built from the two official national files (see Provenance): all
+133 stations are grouped into 44 mapped polling sites. All 44 addresses have coordinates;
+6 sites are snapped to named OSM venues, 5 to houses, 30 to streets and 3 to approximate
+places. The map records that precision per site rather than presenting every result as an
+exact building location.
 
 ## What the map shows
 

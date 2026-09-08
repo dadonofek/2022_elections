@@ -7,7 +7,7 @@ tiles need network. **UI language is Hebrew (RTL) and must stay Hebrew.**
 | city | slug | built |
 |---|---|---|
 | חיפה | `haifa` (default) | `haifa_polling_map.html` — 424 stations, 140 sites, 55.53% turnout |
-| בית שמש | `beit_shemesh` | **not yet** — data ready, geocoding outstanding (see below) |
+| בית שמש | `beit_shemesh` | `beit_shemesh_polling_map.html` — 133 stations, 44 sites, 66.13% turnout |
 
 Pick the city with the `CITY` environment variable: `CITY=beit_shemesh ./build.sh`.
 
@@ -18,7 +18,7 @@ in `build_map.py` was dropped — both are required for `file://` viewing.
 All city/election constants are in **`config.py`**; the pipeline scripts have none of their
 own. See "Adding a city" in `README.md`.
 
-## Beit Shemesh — what is done and what is left
+## Beit Shemesh — complete
 
 **Done.** `data/beit_shemesh/raw.json` holds all 133 stations and all 44 sites, with site
 names and addresses, built by `CITY=beit_shemesh python3 extract.py` from the two official
@@ -27,19 +27,13 @@ has an address; the two files agree on all 44 site groupings. `config.CITIES['be
 carries the locality code (2610), the bounding box, the zoom and the two provenance
 sentences the *על הנתונים* panel prints.
 
-**Left.** Coordinates. Stage 2 (`geocode.py`) needs `nominatim.openstreetmap.org` and
-stage 5 (`snap_osm.py`) needs `overpass-api.de`; the machine this was prepared on had
-neither — its egress policy allows only GitHub and the package registries. Nothing about
-the city is special: run
+Coordinates are complete: 44/44 sites and 133/133 stations map successfully. Location
+precision is 6 named OSM venues, 5 houses, 30 streets and 3 approximate places. The two
+CEC address forms absent from OSM (`הרב איידלשטיין 8`, `סמ ויצ"ו 16`) resolve
+reproducibly through normalized OSM street names in `geocode_retry.py`.
 
-```sh
-CITY=beit_shemesh ./build.sh          # ~44 addresses, a few minutes at 1 req/s
-CITY=beit_shemesh python3 test_map.py
-```
-
-anywhere with ordinary internet access and it finishes, then add the new file to
-`index.html`. `build_data.py` **refuses** to emit a map while any site lacks coordinates
-(override with `ALLOW_MISSING_COORDS=1`), so a half-geocoded run cannot ship quietly.
+`build_data.py` still **refuses** to emit a map while any site lacks coordinates
+(override with `ALLOW_MISSING_COORDS=1`), so a future half-geocoded city cannot ship quietly.
 
 Do **not** substitute the Google-geocoded `output/locations.tsv` from
 JacobWeinbren/Israel-Revised: it covers only 13 of the 44 addresses exactly and 9 more at

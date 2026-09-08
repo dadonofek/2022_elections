@@ -152,7 +152,13 @@ def mode(m):      return click(f'#modeSeg button[data-mode="{m}"]')
 def pot(t):       return do(f"const s=document.querySelector('#potTarget');s.value='{t}';s.dispatchEvent(new Event('change'))")
 def view(v):      return click(f'#viewTabs button[data-view="{v}"]')
 def mapMode(m):   return do(f"const s=document.querySelector('#mapMode');s.value='{m}';s.dispatchEvent(new Event('change'))")
-def tapMarker():  return lambda pg: pg.locator('path.site-marker').nth(60).click(force=True)
+def tapMarker():
+    # Any rendered marker will do; index 60 is Haifa's historical pick. Clamp it so the
+    # scenario also runs on a city with fewer sites (Beit Shemesh has 44, not 140).
+    def tap(pg):
+        m = pg.locator('path.site-marker')
+        m.nth(min(60, m.count() // 2)).click(force=True)
+    return tap
 def tapCardMore(): return click('.mcard-more')
 
 PHONE = dict(width=390, height=844, mobile=True)

@@ -210,6 +210,51 @@ hold none of their own. For another city in the **same election**:
 Nothing else changes: the station list, the site grouping, the place names and the
 addresses all come from the two national files.
 
+## Nationwide — in progress (third tab, כל הארץ)
+
+The goal is a third tab beside חיפה and בית שמש: a map of the whole country, zooming
+from one dot per locality down to individual polling sites, using the same two
+national CEC files every city already reads — no per-city preparation needed.
+
+**Extraction is done.** `national_extract.py` reads `expb.csv` + `kalpiplaces_25.xlsx`
+for **every** locality (not just one, like `extract.py`) and writes
+`data/national/raw.json`:
+
+| | |
+|---|---|
+| Localities (the zoomed-out layer, no geocoding needed) | 1,216 |
+| Polling sites with an address (the zoom-in layer) | 4,205 |
+| Unique (locality, address) pairs to geocode | 3,762 |
+| Stations with results but no usable address (folded into locality totals only) | 839, mostly `מעטפות חיצוניות` (double-envelope/external ballots) and localities the place file only partly covers |
+
+**Geocoding is the blocker, and it cannot run in this sandboxed session** —
+Nominatim, data.gov.il, govmap.gov.il, Geoapify and odata.org.il all fail here with
+`403` / `EGRESS_BLOCKED` at the network-policy level (tested directly, not inferred).
+`geocode_national.py` is written and ready — same approach as `geocode.py`, run over
+every locality instead of one, resumable, ~70 minutes cold (3,762 addresses at
+Nominatim's 1 req/s) — but it needs to run on a machine with normal internet access:
+
+```sh
+pip install -r requirements.txt
+python3 national_extract.py     # already done; re-run only if the inputs change
+python3 geocode_national.py     # run this part elsewhere — see its docstring
+```
+
+It writes `data/national/geocache.json`. Since there is no single bounding box for
+the whole country, each hit is checked against the locality name Nominatim itself
+returns (not a bbox) and marked `verified: true/false` — an unverified hit is kept
+(so it is not re-fetched) but needs a manual look before being trusted, per the
+"validate and label accuracy" step this was scoped around.
+
+**Once `geocache.json` exists**, the remaining stages are the same shape as a city's:
+aggregate to sites (`build_data.py`'s join, extended to loop over localities instead
+of one `config.CITY_HE`), then a two-layer front end — locality dots at low zoom
+(all 1,216, no coordinates needed beyond a per-locality centroid, which can come
+from the geocoded sites themselves or a separate locality-coordinate source),
+polling-site markers at high zoom for the 4,205 addressed sites. `PRODUCT_DECISIONS.md`
+§9 has the reasoning already recorded, including the single-file-vs-per-city-fetch
+fork this design needs to pick.
+
 For a **different election**, also update `BLOCS`, `CAMPS` and `PARTY_NAMES` in `config.py`
 with that election's party letter codes, and point `EXPB_CSV` / `KALPI_PLACES_XLSX` at that
 election's files. `CAMPS` holds the groups that are not

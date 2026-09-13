@@ -290,6 +290,18 @@ deliberately: changing it alters the appearance of the most-used mode.
   non-voters lean like their voting neighbours AND that a 2024 party inherits the 2022
   votes of both its predecessors.
 
+## Nationwide (כל הארץ) — extraction done, geocoding blocked here
+
+See "Nationwide — in progress" in `README.md` for the full picture. Short version:
+`national_extract.py` (no network) turns the two national CEC files into
+`data/national/raw.json` — 1,216 localities, 4,205 addressed polling sites, 3,762
+unique addresses left to geocode. `geocode_national.py` is written to do that, but
+**this sandboxed session's network policy blocks every geocoder tested** (Nominatim,
+data.gov.il, govmap, Geoapify, odata.org.il — all 403/EGRESS_BLOCKED), so it has to
+be run on a machine with normal internet access; send back `data/national/geocache.json`
+when it finishes. After that, the remaining stages (aggregate to sites, build the
+two-layer front end) are the same shape as a city's build, sketched in README.
+
 ## Possible next steps (none required)
 
 * Another camp is a `config.CAMPS` entry plus a `--camp-<key>` colour, a

@@ -8,6 +8,9 @@ UA = config.UA
 BBOX = config.BBOX
 CITY = config.CITY_HE
 
+class Unreachable(Exception):
+    """Nominatim could not be reached at all — not the same answer as "no match"."""
+
 def nominatim(params):
     url = 'https://nominatim.openstreetmap.org/search?' + urllib.parse.urlencode(params)
     req = urllib.request.Request(url, headers={'User-Agent': UA})
@@ -17,7 +20,7 @@ def nominatim(params):
                 return json.loads(r.read().decode())
         except Exception:
             time.sleep(2 + 2 * a)
-    return []
+    raise Unreachable(url)
 
 HONORIFICS = ['ד"ר', 'דר\'', 'הרב', 'פרופ\'', 'פרופ']
 SPELL = {
@@ -68,24 +71,31 @@ def try_queries(street, num):
     return qs
 
 fixed = 0
-misses = [a for a, v in cache.items() if not v]
-for addr in misses:
+# a provisional entry (geocode_overture.py's street-level fallback) is retried too, and
+# kept when Nominatim still has nothing better
+misses = [a for a, v in cache.items() if not v or v.get('provisional')]
+for n_done, addr in enumerate(misses):
     m = re.match(r'^(.*?)\s+(\d+[א-ת]?)$', addr.strip())
     street, num = (m.group(1), m.group(2)) if m else (addr.strip(), None)
     got = None
-    for i, q in enumerate(try_queries(street, num)):
-        p = dict(q, format='json', limit=5, addressdetails=1,
-                 viewbox=config.viewbox_str(), bounded=1)
-        res = nominatim(p); time.sleep(1.1)
-        for r in res:
-            lat, lon = float(r['lat']), float(r['lon'])
-            if config.in_bbox(lat, lon):
-                got = {'lat': lat, 'lon': lon, 'display': r['display_name'],
-                       'osm_type': r.get('type'), 'addresstype': r.get('addresstype'),
-                       'query_stage': 10 + i, 'query_used': str(q)}
-                break
-        if got: break
-    cache[addr] = got
+    try:
+        for i, q in enumerate(try_queries(street, num)):
+            p = dict(q, format='json', limit=5, addressdetails=1,
+                     viewbox=config.viewbox_str(), bounded=1)
+            res = nominatim(p); time.sleep(1.1)
+            for r in res:
+                lat, lon = float(r['lat']), float(r['lon'])
+                if config.in_bbox(lat, lon):
+                    got = {'lat': lat, 'lon': lon, 'display': r['display_name'],
+                           'osm_type': r.get('type'), 'addresstype': r.get('addresstype'),
+                           'query_stage': 10 + i, 'query_used': str(q)}
+                    break
+            if got: break
+    except Unreachable:
+        print(f'Nominatim could not be reached; {len(misses) - n_done} misses left as they were')
+        break
+    if got or not (cache.get(addr) or {}).get('provisional'):
+        cache[addr] = got
     fixed += bool(got)
     print(('OK   ' if got else 'MISS ') + addr + (' -> %.5f,%.5f' % (got['lat'], got['lon']) if got else ''), flush=True)
     json.dump(cache, open(CACHE, 'w'), ensure_ascii=False, indent=1)

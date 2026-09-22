@@ -4,6 +4,10 @@ Scenario list covers every interactive feature; the phone scenarios assert that
 controls are actually REACHABLE, not merely present in the DOM. The old suite
 checked `listItems == 140`, which counts DOM nodes — it passed while the list
 rendered at zero height, off the bottom of every phone screen.
+
+The city's profile (config.PROFILE) picks the scenario set: `scenarios` for the
+analysis map, `volunteer_scenarios` for the volunteers' map, which also asserts on
+every scenario that nothing on screen leans to a party.
 """
 import sys, os, json, pathlib, config
 from playwright.sync_api import sync_playwright
@@ -56,7 +60,7 @@ CHECKS_JS = '''() => {
   r.sizeIsEligible = /בעלי זכות/.test(szs[szs.length - 1] || '');
   r.radiusModeIndependent = (() => {
     const s0 = sites[0], keep = state.mode, r0 = radiusOf(s0);
-    const same = ['potential', 'turnout', 'lead', 'delta', 'margin']
+    const same = [...document.querySelectorAll('#modeSeg button')].map(b => b.dataset.mode)
       .every(m => { state.mode = m; return Math.abs(radiusOf(s0) - r0) < 1e-9; });
     state.mode = keep;
     return same;
@@ -120,6 +124,21 @@ CHECKS_JS = '''() => {
   r.mapH = mapShown ? Math.round(mapR.height) : 0;
   r.headerH = Math.round(box('header').height);
   r.filtersOpen = q('#filters')?.open;
+
+  // --- the volunteer profile ---
+  r.nSites = sites.length;
+  r.nKalpi = DATA.city.n_kalpi;
+  r.visibleCount = visible().length;
+  r.markerFills = [...new Set([...document.querySelectorAll('path.site-marker')]
+    .map(p => (p.getAttribute('fill') || '').toLowerCase()))];
+  r.riskFills = ['red', 'orange', 'yellow', 'white', 'gray'].map(k => cssVar('--risk-' + k).toLowerCase());
+  r.areaFills = ['--area-0', '--area-1', '--area-2', '--area-none'].map(k => cssVar(k).toLowerCase());
+  r.navLinks = [...document.querySelectorAll('#detail:not(.hidden) .navlinks a')].map(a => a.getAttribute('href'));
+  r.detailText = q('#detail:not(.hidden)')?.innerText || '';
+  r.aboutOpen = !(q('#about')?.classList.contains('hidden'));
+  r.bodyText = document.body.innerText;
+  r.areaChips = document.querySelectorAll('#areaChips .chip').length;
+  r.riskChips = document.querySelectorAll('#riskChips .chip').length;
   return r;
 }'''
 
@@ -160,6 +179,10 @@ def tapMarker():
         m.nth(min(60, m.count() // 2)).click(force=True)
     return tap
 def tapCardMore(): return click('.mcard-more')
+def chip(group, key): return do(f"document.querySelector('#{group} .chip[data-key=\\'{key}\\'] input').click()")
+def search(text):     return do(f"const q=document.querySelector('#q');q.value={json.dumps(text)};q.dispatchEvent(new Event('input'))")
+def sort(v):          return do(f"const s=document.querySelector('#sort');s.value='{v}';s.dispatchEvent(new Event('change'))")
+def openSite(pred):   return do(f"selectSite(sites.find(s => {pred}).id, true)")
 
 PHONE = dict(width=390, height=844, mobile=True)
 
@@ -251,12 +274,89 @@ scenarios = {
   'phone_dark':  ('dark', (view('list'),), PHONE, {'listOnScreen': True}),
 }
 
+# ---------------------------------------------------------------- volunteer profile
+# A map election-day volunteers use to choose where to register. Besides everything
+# the shell must do, every scenario asserts it never leans to a party: no bloc or
+# potential word on screen, and no marker painted outside the risk / area palette.
+FORBIDDEN = ('פוטנציאל', 'גוש', 'קואליציה', 'אופוזיציה', 'הדמוקרטים')
+V_SITE_KEYS = ['kalpi', 'name', 'address', 'area', 'risk', 'n_kalpi', 'eligible', 't22', 'top22', 'lat', 'lon']
+V_KALPI_KEYS = ['kalpi', 'barzel', 'name', 'address', 'area', 'risk', 'eligible', 'streets']
+fills_in = lambda pal: lambda c: set(c['markerFills']) <= set(c[pal]) and len(c['markerFills']) > 0
+visible_is = lambda js_expr: lambda c: c['visibleCount'] == js_expr(c)
+volunteer_scenarios = {
+  'light':      ('light', (), {}, {'sidebarRightOfMap': True, 'mode': 'risk', 'sort': 'risk', 'mapModeUsable': False,
+                                   'legendTitle': 'רמת סיכון', 'statFirst': 'קלפיות', 'sizeIsEligible': True,
+                                   'sortOptions': ['risk', 'kalpi', 'area', 'eligible', 'name'],
+                                   'riskFill': fills_in('riskFills'),
+                                   'allMarkers': lambda c: c['markers'] == c['nSites'] and c['visibleCount'] == c['nSites'],
+                                   'chips': lambda c: c['areaChips'] >= 1 and c['riskChips'] >= 1}),
+  'dark':       ('dark', (), {}, {'riskFill': fills_in('riskFills')}),
+  'area':       ('light', (mode('area'),), {}, {'mode': 'area', 'legendTitle': 'אזור התנדבות',
+                                                'areaFill': fills_in('areaFills')}),
+  'area_dark':  ('dark', (mode('area'),), {}, {'areaFill': fills_in('areaFills')}),
+  # the card of a building that was a polling site in 2022, and of a new one
+  'detail':     ('light', (openSite('s.h22'),), {},
+                 {'detailOpen': True, 'navLinks': lambda c: len(c['navLinks']) == 2 and all('%' in u for u in c['navLinks']),
+                  'h22Shown': lambda c: 'אחוז הצבעה באתר' in c['detailText'] and 'הרשימות הגדולות' in c['detailText']}),
+  'detail_new': ('light', (openSite('!s.h22'),), {},
+                 {'detailOpen': True, 'newSite': lambda c: 'אתר חדש' in c['detailText']}),
+  'labels':     ('light', (click('#btnLabels'), do("map.setZoom(15)")), {}, {}),
+  'table':      ('light', (click('#btnTable'),), {}, {'coveredByTable': True, 'tableKeys': V_SITE_KEYS,
+                                                      'rows': lambda c: c['tableRows'] == c['nSites']}),
+  'table_kalpi':('light', (click('#btnTable'), click('#tvSeg button[data-level="kalpi"]')), {},
+                 {'coveredByTable': True, 'tableKeys': V_KALPI_KEYS,
+                  'rows': lambda c: c['tableRows'] == c['nKalpi']}),
+  # one area's chip off: only the other area's buildings are left, on the map and in the list
+  'filter_area':('light', (chip('areaChips', 'בית שמש 2'),), {},
+                 {'onlyArea1': lambda c: 0 < c['visibleCount'] < c['nSites'] and c['markers'] == c['visibleCount']
+                                         and c['listItems'] == c['visibleCount']}),
+  'filter_risk':('light', (chip('riskChips', 'red'),), {},
+                 {'noRed': lambda c: 0 < c['visibleCount'] < c['nSites'] and c['markers'] == c['visibleCount']}),
+  # a street where voters live finds the station that serves it
+  'search_street': ('light', (search('אשכול לוי'),), {},
+                 {'found': lambda c: 0 < c['visibleCount'] < c['nSites']}),
+  'search_kalpi':  ('light', (search('112.3'),), {}, {'found': lambda c: c['visibleCount'] == 1}),
+  'sort_area':  ('light', (sort('area'),), {}, {'sort': 'area'}),
+  'about':      ('light', (click('#btnAbout'),), {}, {'aboutOpen': True,
+                 'aboutSays': lambda c: 'אינה מזוהה עם אף מפלגה' in c['bodyText']}),
+  'narrow':     ('light', (), dict(width=900, height=1100), {}),
+
+  # ---- phone scenarios: every one asserts REACHABILITY, not DOM presence ----
+  'phone_map':   ('light', (), PHONE, {'view': 'map', 'modeSegUsable': False, 'mapModeUsable': True,
+                                       'mapMode': 'risk', 'mapPotShown': False}),
+  'phone_mapmode': ('light', (mapMode('area'),), PHONE,
+                  {'view': 'map', 'mode': 'area', 'mapMode': 'area', 'legendTitle': 'אזור התנדבות',
+                   'mapModeUsable': True, 'areaFill': fills_in('areaFills')}),
+  'phone_mapmode_sync': ('light', (view('list'), click('#filters > summary'), mode('area'), view('map')), PHONE,
+                  {'view': 'map', 'mapMode': 'area'}),
+  'phone_list':  ('light', (view('list'),), PHONE, {'view': 'list', 'listOnScreen': True, 'sortUsable': True}),
+  'phone_filt':  ('light', (view('list'), click('#filters > summary')), PHONE, {'searchUsable': True, 'filtersOpen': True}),
+  'phone_menu':  ('light', (click('#btnMenu'),), PHONE, {'menuOpen': True}),
+  'phone_stats': ('light', (click('#btnStatsMore'),), PHONE,
+                  {'allTiles': lambda c: c['statTiles'] >= 6}),
+  'phone_table': ('light', (click('#btnMenu'), click('#btnTable')), PHONE,
+                  {'tableCols': 6, 'tableKeys': ['name', 'area', 'risk', 'n_kalpi', 'eligible', 't22']}),
+  'phone_table_kalpi': ('light', (click('#btnMenu'), click('#btnTable'), click('#tvSeg button[data-level="kalpi"]')), PHONE,
+                  {'tableCols': 5, 'tableKeys': ['kalpi', 'name', 'area', 'risk', 'eligible']}),
+  'phone_detail':('light', (view('map'), do("document.querySelectorAll('.site')[2].click()")), PHONE,
+                  {'view': 'list', 'detailOpen': True}),
+  'phone_tap':   ('light', (tapMarker(),), PHONE,
+                  {'view': 'map', 'popupOpen': True, 'cardMoreBtn': True, 'detailOpen': False,
+                   'cardTitleClearsClose': True}),
+  'phone_card_more': ('light', (tapMarker(), tapCardMore()), PHONE,
+                  {'view': 'list', 'detailOpen': True, 'popupOpen': False}),
+  'desktop_tap': ('light', (tapMarker(),), {}, {'detailOpen': True, 'popupOpen': False}),
+  'phone_dark':  ('dark', (view('list'),), PHONE, {'listOnScreen': True}),
+}
+
+SCENARIOS = volunteer_scenarios if config.PROFILE == 'volunteer' else scenarios
+
 if __name__ == "__main__":
     scen = sys.argv[1] if len(sys.argv) > 1 else 'all'
-    names = list(scenarios) if scen == 'all' else [scen]
+    names = list(SCENARIOS) if scen == 'all' else [scen]
     bad = 0
     for n in names:
-        theme, acts, dims, expect = scenarios[n]
+        theme, acts, dims, expect = SCENARIOS[n]
         c, errs, fails = run(theme, acts, n, **dims)
         problems = []
         # Basemap tiles need the network. When they cannot be reached at all, that is
@@ -279,8 +379,13 @@ if __name__ == "__main__":
         # the list must be genuinely on screen wherever it is the active pane
         if c['view'] == 'list' and not c['listOnScreen']:
             problems.append(f"site list not on screen (height {c['listH']})")
+        if config.PROFILE == 'volunteer':
+            leaning = [w for w in FORBIDDEN if w in c['bodyText']]
+            if leaning: problems.append(f'party-leaning words on screen: {leaning}')
         for k, want in expect.items():
-            if c.get(k) != want:
+            if callable(want):              # a predicate over the whole check result
+                if not want(c): problems.append(f'{k}: check failed')
+            elif c.get(k) != want:
                 problems.append(f'{k}: expected {want!r}, got {c.get(k)!r}')
         bad += len(problems)
         print(f"[{'FAIL' if problems else ' ok '}] {n:13s}{'*' if offline else ' '} markers={c['markers']:3d} list={c['listItems']:3d} "

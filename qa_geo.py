@@ -2,7 +2,7 @@ import json, collections, math, config
 cache = json.load(open(config.data('geocache.json')))
 raw = json.load(open(config.data('raw.json')))['stations']
 addr_voters = collections.Counter()
-for s in raw: addr_voters[s['address']] += s['voters']
+for s in raw: addr_voters[s['address']] += s.get('voters', 0)   # a volunteer list has no results yet
 
 bad_city, notes = [], []
 for a, g in cache.items():

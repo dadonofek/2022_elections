@@ -12,6 +12,12 @@ Two sources produce the same shape, chosen by config.EXTRACT:
               was built this way before the national place file was found and
               stays on it; the two agree on 421 of its 424 addresses and on all
               140 site groupings (see README, "Provenance").
+
+  'volunteer' the COMING election's stations, from the observers' station list
+              (config.STATION_LIST, written by import_station_list.py), grouped
+              into sites by place name + address. The 2022 stations of the same
+              locality ride along under 'history', read the 'cec' way, so the
+              map can show what each building recorded last time.
 """
 import json, re, csv, config
 
@@ -163,21 +169,81 @@ def extract_workbook():
     return stations, sites
 
 
+def extract_volunteer():
+    """The coming election's stations from the observers' list, one site per
+    (place name, address) — the list carries no site number — plus the 2022
+    stations and sites of the same locality as history."""
+    with open(config.STATION_LIST, encoding='utf-8') as fh:
+        rows = list(csv.DictReader(fh))
+    if not rows:
+        raise SystemExit(f'{config.STATION_LIST} is empty — run import_station_list.py first')
+    stations = [{
+        'kalpi': r['kalpi'], 'barzel': int(r['barzel']),
+        'site': r['site'], 'address': r['address'],
+        'eligible': int(r['eligible']),
+        'risk': r['risk'], 'risk_national': r['risk_national'],
+        'area': r['area'], 'streets': r['streets'],
+        'quarter': r['quarter'], 'sub_quarter': r['sub_quarter'], 'stat_area': r['stat_area'],
+    } for r in rows]
+
+    sites, seen = [], {}
+    for s in sorted(stations, key=kalpi_sort):
+        key = (s['site'], s['address'])
+        if key in seen:
+            st = seen[key]
+            # one building is one volunteering place: a site split between two
+            # areas would need two markers, so refuse rather than pick one
+            if st['area'] != s['area']:
+                raise SystemExit(f'site {key} is in two areas: {st["area"]!r} and {s["area"]!r}')
+            st['kalpiot'].append(s['kalpi'])
+            continue
+        st = {'id': len(sites) + 1, 'name': s['site'], 'address': s['address'],
+              'area': s['area'], 'kalpiot': [s['kalpi']]}
+        seen[key] = st
+        sites.append(st)
+    for st in sites:
+        st['n_kalpi'] = len(st['kalpiot'])
+        st['kalpi_list'] = ', '.join(st['kalpiot'])
+        del st['kalpiot']
+
+    h_stations, h_sites = extract_cec()
+    h_stations.sort(key=kalpi_sort)
+    return stations, sites, {'election': 'הכנסת ה-25 (2022)',
+                             'stations': h_stations, 'sites': h_sites}
+
+
 def kalpi_sort(s):
     return [int(x) for x in re.findall(r'\d+', s['kalpi'])]
 
 
 # ------------------------------------------------------------------------ main
-stations, sites = extract_cec() if config.EXTRACT == 'cec' else extract_workbook()
-stations.sort(key=kalpi_sort)
-json.dump({'stations': stations, 'sites': sites},
-          open(config.data('raw.json'), 'w'), ensure_ascii=False, indent=1)
+def main():
+    history = None
+    if config.EXTRACT == 'volunteer':
+        stations, sites, history = extract_volunteer()
+    elif config.EXTRACT == 'cec':
+        stations, sites = extract_cec()
+    else:
+        stations, sites = extract_workbook()
+    stations.sort(key=kalpi_sort)
+    out = {'stations': stations, 'sites': sites}
+    if history is not None:
+        out['history'] = history
+    json.dump(out, open(config.data('raw.json'), 'w'), ensure_ascii=False, indent=1)
 
-print(config.CITY_HE, '| source:', config.EXTRACT, '->', config.data('raw.json'))
-print('stations', len(stations), 'sites', len(sites))
-addrs = sorted({s['address'] for s in stations if s['address']})
-print('unique addresses', len(addrs))
-print('missing address', sum(1 for s in stations if not s['address']))
-tot_elig = sum(s['eligible'] or 0 for s in stations)
-tot_vot = sum(s['voters'] or 0 for s in stations)
-print('eligible', tot_elig, 'voters', tot_vot, 'turnout', round(100 * tot_vot / tot_elig, 2))
+    print(config.CITY_HE, '| source:', config.EXTRACT, '->', config.data('raw.json'))
+    print('stations', len(stations), 'sites', len(sites))
+    addrs = sorted({s['address'] for s in stations if s['address']})
+    print('unique addresses', len(addrs))
+    print('missing address', sum(1 for s in stations if not s['address']))
+    tot_elig = sum(s['eligible'] or 0 for s in stations)
+    if history is None:
+        tot_vot = sum(s['voters'] or 0 for s in stations)
+        print('eligible', tot_elig, 'voters', tot_vot, 'turnout', round(100 * tot_vot / tot_elig, 2))
+    else:
+        print('eligible', tot_elig, '| history:', history['election'],
+              len(history['stations']), 'stations,', len(history['sites']), 'sites')
+
+
+if __name__ == '__main__':
+    main()

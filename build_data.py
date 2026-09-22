@@ -1,5 +1,14 @@
 """Join every polling station to geocoded coordinates and aggregate to map sites."""
-import json, re, os, unicodedata, config
+import re, config
+from sitegeo import (load, precision, site_geo, spread_colocated, map_center,
+                     refuse_missing_coords, national_turnout, write_map_data)
+
+if config.PROFILE == 'volunteer':
+    # the volunteer map joins a different station list — the coming election's — and
+    # builds its own payload; see that file
+    import build_volunteer_data
+    build_volunteer_data.main()
+    raise SystemExit(0)
 
 BLOCS = config.BLOCS
 CAMPS = config.CAMPS
@@ -9,31 +18,10 @@ PARTY_NAMES = config.PARTY_NAMES
 # each camp, which is narrower than a bloc (הדמוקרטים sits inside the opposition)
 POT_KEYS = ('coalition', 'opposition', 'other', *CAMPS)
 
-def load(name, default=None):
-    """A city part-way through the pipeline is missing later stages' files; treat
-    them as empty so the no-coordinates check below reports what is actually
-    wrong instead of a traceback."""
-    path = config.data(name)
-    if not os.path.exists(path):
-        if default is None:
-            raise SystemExit(f'{path} is missing — run extract.py for {config.CITY_SLUG} first')
-        print(f'note: {path} is missing, treating it as empty')
-        return default
-    return json.load(open(path))
-
 raw = load('raw.json')
 geo = load('geocache.json', {})
 snaps = load('osm_snaps.json', {})   # sites matched to a named OSM venue
 stations, site_rows = raw['stations'], raw['sites']
-
-def precision(g):
-    if not g: return 'none'
-    if g.get('snapped'): return 'venue'
-    at = (g.get('addresstype') or '') + '|' + (g.get('osm_type') or '')
-    if 'house_number' in at or 'building' in at: return 'house'
-    if 'road' in at or 'residential' in at or 'tertiary' in at or 'secondary' in at or 'primary' in at or 'unclassified' in at or 'living_street' in at or 'pedestrian' in at:
-        return 'street'
-    return 'place'
 
 def bloc_totals(parties):
     t = {k: sum(parties.get(p, 0) for p in ps) for k, ps in BLOCS.items()}
@@ -61,12 +49,7 @@ def potential(o):
 
 # --- station level -------------------------------------------------------
 for s in stations:
-    g = geo.get(s['address'])
-    sn = snaps.get(f"{s['site']}||{s['address']}")
-    if sn:
-        g = dict(g or {}, lat=sn['lat'], lon=sn['lon'], snapped=True,
-                 display=sn['osm_name'] + ' · ' + (g or {}).get('display', ''),
-                 osm_venue=sn['osm_name'])
+    g = site_geo(s['site'], s['address'], geo, snaps)
     s['lat'], s['lon'] = (g['lat'], g['lon']) if g else (None, None)
     s['geo_precision'] = precision(g)
     s['geo_display'] = g['display'] if g else None
@@ -123,22 +106,7 @@ for i, ((name, addr), st) in enumerate(sorted(sites.items(), key=lambda kv: kalp
     out_sites.append(st)
 
 # --- separate co-located sites so markers do not overlap exactly ---------
-from collections import defaultdict
-at_point = defaultdict(list)
-for st in out_sites:
-    if st['lat'] is not None:
-        at_point[(round(st['lat'], 6), round(st['lon'], 6))].append(st)
-import math
-spread = 0
-for pt, group in at_point.items():
-    if len(group) > 1:
-        spread += len(group)
-        r = 0.00035
-        for j, st in enumerate(group):
-            a = 2 * math.pi * j / len(group)
-            st['lat'] = round(pt[0] + r * math.cos(a), 7)
-            st['lon'] = round(pt[1] + r * math.sin(a) / math.cos(math.radians(pt[0])), 7)
-            st['jittered'] = True
+spread = spread_colocated(out_sites)
 
 city = {
     'eligible': sum(s['eligible'] for s in stations),
@@ -154,10 +122,7 @@ city = {
     'match_note': config.MATCH_NOTE,
     'parties': {},
 }
-_pts = [(s['lat'], s['lon']) for s in out_sites if s['lat'] is not None]
-city['center'] = list(config.MAP_CENTER) if config.MAP_CENTER else (
-    [round(sum(p[0] for p in _pts) / len(_pts), 5),
-     round(sum(p[1] for p in _pts) / len(_pts), 5)] if _pts else [32.0, 35.0])
+city['center'] = map_center(out_sites)
 city['zoom'] = config.MAP_ZOOM
 for s in stations:
     for p, v in s['parties'].items():
@@ -169,23 +134,7 @@ city['turnout'] = round(100 * city['voters'] / city['eligible'], 2)
 city['non_voters'] = city['eligible'] - city['voters']
 city['pot'] = potential(city)
 
-# National turnout is the map's primary delta baseline. Recompute it from the
-# official national per-station file when it is available so the number is derived
-# rather than asserted; fall back to the documented constant otherwise.
-def national_turnout():
-    import csv, os
-    path = config.EXPB_CSV
-    if not os.path.exists(path):
-        return config.NATIONAL_TURNOUT, 'config.NATIONAL_TURNOUT'
-    with open(path, encoding='utf-8-sig') as fh:
-        rows = csv.reader(fh)
-        hdr = next(rows)
-        i_e, i_v = hdr.index('בזב'), hdr.index('מצביעים')
-        e = v = 0
-        for r in rows:
-            e += int(r[i_e]); v += int(r[i_v])
-    return (round(100 * v / e, 2), f'{path} ({v:,}/{e:,})') if e else (config.NATIONAL_TURNOUT, 'fallback')
-
+# National turnout is the map's primary delta baseline (derived, see sitegeo.py).
 city['national_turnout'], _nt_src = national_turnout()
 
 payload = {'city': city, 'sites': out_sites, 'party_names': PARTY_NAMES, 'blocs': BLOCS,
@@ -204,18 +153,5 @@ for k in CAMPS:
           round(100 * city[k] / city['valid'], 2), '% | potential', city['pot'][k],
           '| site max potential', max(s['pot'][k] for s in out_sites))
 print('city turnout %:', city['turnout'], '| coalition', cb['coalition'], 'opp', cb['opposition'], 'other', city['other'])
-# A site with no coordinates has no marker, so a partly-geocoded city renders as a
-# map that quietly omits part of itself. Refuse to WRITE that, so build_map.py cannot
-# pick up a stale half-built file either. ALLOW_MISSING_COORDS=1 builds one anyway.
-_no_coords = [s['name'] for s in out_sites if s['lat'] is None]
-if _no_coords and not os.environ.get('ALLOW_MISSING_COORDS'):
-    raise SystemExit(
-        f'\n{len(_no_coords)} of {len(out_sites)} sites have no coordinates, so they would '
-        f'have no marker:\n  ' + '\n  '.join(_no_coords[:15]) +
-        ('\n  ...' if len(_no_coords) > 15 else '') +
-        f'\nNothing was written. Run geocode.py / geocode_retry.py for {config.CITY_SLUG} '
-        'first, or set ALLOW_MISSING_COORDS=1 to build the map anyway.')
-
-blob = json.dumps(payload, ensure_ascii=False, separators=(',', ':'))
-open(config.data('map_data.json'), 'w', encoding='utf-8').write(blob)
-print('json size KB:', round(len(blob.encode())/1024))
+refuse_missing_coords(out_sites)
+write_map_data(payload)

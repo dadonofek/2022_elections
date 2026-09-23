@@ -42,6 +42,13 @@
      clears 2.57:1 there, the widest margin of any ramp here. */
   --camp-dem:#006572;
   --pot-dem-0:#00bed5; --pot-dem-1:#00a7bc; --pot-dem-2:#0090a2; --pot-dem-3:#007a8a; --pot-dem-4:#006572;
+  /* the volunteer map. RISK uses the observers' own colour names, so the literal hues:
+     the status steps of the dataviz palette (critical / serious / warning), mode-invariant,
+     and every use ships with its word. AREA is categorical: slots 1 and 3 (blue, aqua)
+     validate all-pairs in both themes (CVD dE 23.1 light / 19.6 dark); a third area takes
+     violet, which passes in light only — its word is always beside it. */
+  --risk-red:#d03b3b; --risk-orange:#ec835a; --risk-yellow:#fab219; --risk-white:#f0efec; --risk-gray:#898781;
+  --area-0:#2a78d6; --area-1:#1baf7a; --area-2:#4a3aa7; --area-none:#b0ada4;
   --shadow:0 1px 2px rgba(0,0,0,.06),0 6px 20px rgba(0,0,0,.08);
   --radius:10px;
   --sidebar-w:380px;
@@ -61,6 +68,7 @@
     --div-coal-1:#8a4423; --div-coal-2:#d95926; --div-coal-3:#f0a077;
     --dlt-none:#5b5b54;
     --camp-dem:#00707e;
+    --area-0:#3987e5; --area-1:#199e70; --area-2:#9085e9; --area-none:#5b5b54;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.5);
   }
 }
@@ -78,6 +86,7 @@
   --div-coal-1:#8a4423; --div-coal-2:#d95926; --div-coal-3:#f0a077;
   --dlt-none:#5b5b54;
   --camp-dem:#00707e;
+  --area-0:#3987e5; --area-1:#199e70; --area-2:#9085e9; --area-none:#5b5b54;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.5);
 }
 
@@ -169,6 +178,9 @@ input[type=range]{width:100%; accent-color:var(--accent)}
 .legend-row{display:flex; align-items:center; gap:8px; font-size:12.5px; margin-bottom:5px}
 .legend-row .sw{width:13px; height:13px; border-radius:4px; flex:none; box-shadow:0 0 0 1px rgba(11,11,11,.18)}
 .legend-row .n{margin-inline-start:auto; color:var(--text-muted); font-variant-numeric:tabular-nums; font-size:11.5px}
+/* the volunteer legend: a count stays with its unit, an area's part of the city goes under it */
+.legend-row .n.nowrap{white-space:nowrap}
+.legend-row .sub{font-size:11px; line-height:1.2}
 .ramp{display:flex; height:11px; border-radius:4px; overflow:hidden; gap:2px; margin:4px 0 3px}
 .ramp span{flex:1; box-shadow:0 0 0 1px rgba(11,11,11,.12) inset}
 .ramp-labels{display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); font-variant-numeric:tabular-nums}
@@ -228,6 +240,12 @@ table.kt td{padding:5px 6px; border-bottom:1px solid var(--border)}
 table.kt tbody tr:hover{background:var(--surface-2)}
 .muted{color:var(--text-muted)}
 .warn{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; color:var(--text-secondary); background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:3px 7px; margin-top:8px}
+/* a dot inside running text or a table cell, where it is not a flex item */
+.dot.i{display:inline-block; vertical-align:middle; margin-inline-end:5px; margin-top:-2px}
+.navlinks{display:flex; gap:6px; margin-top:10px; flex-wrap:wrap}
+.navlinks .btn{text-decoration:none; color:var(--text-primary)}
+.h22-top{margin:10px 0 0; font-size:12.5px; line-height:1.5}
+table.kt td.streets{color:var(--text-secondary); font-size:11.5px; line-height:1.35}
 
 /* ---------- map bits ---------- */
 .leaflet-container{font:inherit; background:var(--surface-2)}
@@ -419,8 +437,13 @@ table.full tbody tr:hover{background:var(--surface-2)}
 <div class="app">
   <header>
     <div class="brand">
+<!--@analysis-->
       <h1>מפת הקלפיות של __CITY_HE__ — הבחירות לכנסת ה-25</h1>
       <p>__N_KALPI__ קלפיות ב-__N_SITES__ אתרי הצבעה · נובמבר 2022 · תוצאות רשמיות של ועדת הבחירות המרכזית</p>
+<!--@volunteer-->
+      <h1>מפת הקלפיות של __CITY_HE__ — __ELECTION_HE__</h1>
+      <p>__N_KALPI__ קלפיות ב-__N_SITES__ אתרי הצבעה · רשימת הקלפיות מ-__LIST_DATE__ · למתנדבי יום הבחירות</p>
+<!--@end-->
     </div>
     <div class="stats" id="stats"></div>
     <button class="btn statsmore" id="btnStatsMore" aria-expanded="false">עוד</button>
@@ -443,6 +466,7 @@ table.full tbody tr:hover{background:var(--surface-2)}
         <summary>סינון וצביעה <span class="sum" id="filtSummary"></span></summary>
         <div class="panel">
           <h2>צביעת הסמנים</h2>
+<!--@analysis-->
           <div class="seg grid3" id="modeSeg" role="group" aria-label="בחירת צביעה">
             <button data-mode="potential" aria-pressed="true">פוטנציאל</button>
             <button data-mode="turnout" aria-pressed="false">אחוז הצבעה</button>
@@ -460,10 +484,17 @@ table.full tbody tr:hover{background:var(--surface-2)}
             </select>
             <p class="legend-note" id="potNote" style="margin:4px 0 0"></p>
           </div>
+<!--@volunteer-->
+          <div class="seg" id="modeSeg" role="group" aria-label="בחירת צביעה">
+            <button data-mode="risk" aria-pressed="true">רמת סיכון</button>
+            <button data-mode="area" aria-pressed="false">אזור התנדבות</button>
+          </div>
+<!--@end-->
         </div>
 
         <div class="panel">
           <h2>סינון</h2>
+<!--@analysis-->
           <div class="field">
             <input type="search" id="q" placeholder="חיפוש לפי שם אתר, כתובת או מספר קלפי" aria-label="חיפוש">
           </div>
@@ -478,12 +509,26 @@ table.full tbody tr:hover{background:var(--surface-2)}
             <label class="lab">גוש מוביל באתר</label>
             <div class="chips" id="blocChips"></div>
           </div>
+<!--@volunteer-->
+          <div class="field">
+            <input type="search" id="q" placeholder="חיפוש: מספר קלפי, אתר, כתובת או רחוב" aria-label="חיפוש">
+          </div>
+          <div class="field">
+            <label class="lab">אזור התנדבות</label>
+            <div class="chips" id="areaChips"></div>
+          </div>
+          <div class="field">
+            <label class="lab">רמת סיכון</label>
+            <div class="chips" id="riskChips"></div>
+          </div>
+<!--@end-->
         </div>
       </details>
 
       <div class="listhead">
         <span id="count"></span>
         <select id="sort" aria-label="מיון">
+<!--@analysis-->
           <option value="pot_desc">פוטנציאל — מהגבוה</option>
           <option value="turnout_asc">אחוז הצבעה — מהנמוך</option>
           <option value="delta_asc">פער מהארצי — מהגדול</option>
@@ -492,6 +537,13 @@ table.full tbody tr:hover{background:var(--surface-2)}
           <option value="coal_desc">שיעור קואליציה 2022</option>
           <option value="opp_desc">שיעור אופוזיציה רחבה</option>
           <option value="kalpi">לפי מספר קלפי</option>
+<!--@volunteer-->
+          <option value="risk">רמת סיכון — מהגבוהה</option>
+          <option value="kalpi">לפי מספר קלפי</option>
+          <option value="area">לפי אזור</option>
+          <option value="eligible">בעלי זכות — מהגדול</option>
+          <option value="name">לפי שם האתר</option>
+<!--@end-->
         </select>
       </div>
       <div class="scroll" id="list"></div>
@@ -502,6 +554,7 @@ table.full tbody tr:hover{background:var(--surface-2)}
     <div class="mapwrap">
       <div id="map"></div>
       <div class="mapbar">
+<!--@analysis-->
         <select id="mapMode" class="mapctl" aria-label="צביעת הסמנים">
           <option value="potential">צביעה: פוטנציאל</option>
           <option value="turnout">צביעה: אחוז הצבעה</option>
@@ -515,6 +568,12 @@ table.full tbody tr:hover{background:var(--surface-2)}
           <option value="opposition">אופוזיציה רחבה</option>
           <option value="other">רשימות אחרות</option>
         </select>
+<!--@volunteer-->
+        <select id="mapMode" class="mapctl" aria-label="צביעת הסמנים">
+          <option value="risk">צביעה: רמת סיכון</option>
+          <option value="area">צביעה: אזור התנדבות</option>
+        </select>
+<!--@end-->
         <button class="btn" id="btnReset">מבט על כל העיר</button>
         <button class="btn" id="btnLabels" aria-pressed="false">שמות אתרים</button>
       </div>
@@ -534,8 +593,8 @@ table.full tbody tr:hover{background:var(--surface-2)}
     <div class="tv-head">
       <strong>טבלת נתונים מלאה</strong>
       <div class="seg" id="tvSeg" style="width:280px">
-        <button data-level="site" aria-pressed="true">לפי אתר הצבעה (140)</button>
-        <button data-level="kalpi" aria-pressed="false">לפי קלפי (424)</button>
+        <button data-level="site" aria-pressed="true">לפי אתר הצבעה (__N_SITES__)</button>
+        <button data-level="kalpi" aria-pressed="false">לפי קלפי (__N_KALPI__)</button>
       </div>
       <span class="muted" id="tvCount"></span>
       <button class="btn" id="btnCloseTable" style="margin-inline-start:auto">סגירה</button>

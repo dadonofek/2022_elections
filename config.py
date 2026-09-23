@@ -63,7 +63,20 @@ CITIES = {
         'center':       None,
         'zoom':         13.2,
         'out_html':     'beit_shemesh_polling_map.html',
-        'extract':      'cec',
+        # A map for the election-day volunteers, not a results analysis — see
+        # PROFILES below. Its stations are the coming election's, from the
+        # observers' station list; 2022 is shown per building, as background.
+        'profile':      'volunteer',
+        'extract':      'volunteer',
+        'station_list': 'data/beit_shemesh/stations_2026.csv',
+        'election_he':  'הבחירות לכנסת ה-26',
+        # The list splits the city into volunteering places, one sheet each. What
+        # part of the city each covers, as the list's own status sheet puts it.
+        'areas': {
+            'בית שמש 1': 'רמת בית שמש',
+            'בית שמש 2': 'העיר הוותיקה',
+            'בית שמש 3': 'העיר הוותיקה',
+        },
         'source_note':  'קובץ מקומות הקלפי הרשמי של ועדת הבחירות המרכזית '
                         '(<code>kalpiplaces_kalpieslist_27-10.xlsx</code>), שבו לכל קלפי '
                         'רשומים מספר הריכוז, שם המקום והכתובת',
@@ -71,6 +84,16 @@ CITIES = {
                         'המרכזית עצמה, ולא מהתאמה שנעשתה בדיעבד',
     },
 }
+
+# PROFILES — what a city's map is FOR. One pipeline and one map shell serve both.
+#   'analysis'   the 2022 results as a campaign tool: potential, blocs, the camp
+#                (the default; Haifa).
+#   'volunteer'  a map for election-day volunteers choosing where to register: the
+#                coming election's stations, coloured by the observers' risk level
+#                or by volunteering area, and NOTHING that leans to a party — no
+#                party or bloc colour anywhere, no potential. The 2022 turnout and
+#                leading lists appear per building as plain text only (Beit Shemesh).
+PROFILES = ('analysis', 'volunteer')
 
 CITY_SLUG = os.environ.get('CITY', 'haifa')
 if CITY_SLUG not in CITIES:
@@ -84,8 +107,13 @@ SOURCE_NOTE   = _c['source_note']  # provenance line shown in the map's "על ה
 MATCH_NOTE    = _c['match_note']   # how station->address was established, in the same panel
 
 # --------------------------------------------------------------- inputs / outputs
-EXTRACT       = _c['extract']                   # 'cec' | 'workbook'
+PROFILE       = _c.get('profile', 'analysis')   # see PROFILES above
+assert PROFILE in PROFILES, PROFILE
+EXTRACT       = _c['extract']                   # 'cec' | 'workbook' | 'volunteer'
 MATCHING_XLSX = _c.get('matching_xlsx')         # only used when EXTRACT == 'workbook'
+STATION_LIST  = _c.get('station_list')          # only used when EXTRACT == 'volunteer'
+ELECTION_HE   = _c.get('election_he')           # the coming election, for the volunteer map
+AREAS         = _c.get('areas', {})             # volunteering place -> part of the city
 OUT_HTML      = _c['out_html']                  # generated single-file map
 
 # Per-city cache directory. Every stage reads and writes here, so two cities

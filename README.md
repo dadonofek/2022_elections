@@ -1,8 +1,14 @@
-# מפת הקלפיות — הכנסת ה-25
+# מפת הקלפיות
 
-Single-file, self-contained HTML maps of every polling station in a city in the November
-2022 Knesset election, grouped into the polling sites where they operated, with official
-results, turnout and a full per-party breakdown for every station.
+Single-file, self-contained HTML maps of every polling station in a city, grouped into the
+polling sites (buildings) where they operate. One pipeline and one map shell serve two
+kinds of map — a city's **profile** (`config.PROFILES`) says which:
+
+* **analysis** (Haifa) — the November 2022 Knesset election as a campaign tool: official
+  results, turnout, potential, blocs and a full per-party breakdown for every station.
+* **volunteer** (Beit Shemesh) — the *coming* election's stations for the election-day
+  volunteers who pick where to register: coloured by the observers' risk level or by
+  volunteering area, and deliberately **party-neutral**. See *The volunteers' map* below.
 
 Open the map file in any browser — no server, no build step, no API key. The file embeds
 Leaflet and the whole dataset; only the OpenStreetMap background tiles need an internet
@@ -17,18 +23,61 @@ connection.
 One pipeline, one front end, one city per built file. Cities are entries in
 `config.CITIES`; pick one with the `CITY` environment variable (default `haifa`).
 
-| city | slug | stations | sites | eligible | turnout | map |
-|---|---|---|---|---|---|---|
-| חיפה | `haifa` | 424 | 140 | 253,292 | 55.53% | `haifa_polling_map.html` ✅ built |
-| בית שמש | `beit_shemesh` | 133 | 44 | 78,064 | 66.13% | `beit_shemesh_polling_map.html` ✅ built |
+| city | slug | profile | election | stations | sites | eligible | map |
+|---|---|---|---|---|---|---|---|
+| חיפה | `haifa` | analysis | Knesset 25 (2022) | 424 | 140 | 253,292 | `haifa_polling_map.html` ✅ built |
+| בית שמש | `beit_shemesh` | volunteer | Knesset 26 (list of 15.9.2026) | 156 | 57 | 97,124 | `beit_shemesh_polling_map.html` ✅ built |
 
-Beit Shemesh is fully built from the two official national files (see Provenance): all
-133 stations are grouped into 44 mapped polling sites. All 44 addresses have coordinates;
-6 sites are snapped to named OSM venues, 5 to houses, 30 to streets and 3 to approximate
-places. The map records that precision per site rather than presenting every result as an
-exact building location.
+Beit Shemesh is built from the observers' station list for the coming election (see *The
+volunteers' map*), with its 2022 results — from the two official national files, see
+Provenance — attached per building as background. All 57 sites have coordinates: 5 are
+snapped to named OSM venues, 5 to houses, 45 to streets and 2 to approximate places; 16 of
+the street-level ones are new addresses placed by the offline street fallback
+(`geocode_overture.py`) and are marked provisional. The map records that precision per
+site rather than presenting every result as an exact building location.
 
-## What the map shows
+## The volunteers' map (Beit Shemesh)
+
+Asked for by the coordinator of the city's observers: a map the volunteers use to see
+where the stations of their volunteering place are, which sit close together (so friends
+can register near each other), and where the risky ones are — **not** a results analysis.
+It goes to every volunteer, so nothing on it may lean to a party.
+
+* **One marker per building**, area ∝ the building's eligible voters in the coming
+  election. Colour has two modes:
+  * *רמת סיכון* (default) — the risk colour the observers' list gives each station, in the
+    list's own words: אדום / כתום / צהוב. A building takes its most severe station's
+    colour; a mixed building says so in its card.
+  * *אזור התנדבות* — which volunteering place's list the station is on (`בית שמש 1` =
+    רמת בית שמש, `בית שמש 2` = the old city).
+* **Filters** by volunteering area and by risk level, and a search over station number,
+  building, address and the **streets whose voters each station serves** — so a
+  volunteer can find the station of their own street. The list is sorted red-first.
+* **The card** of a building: its stations with their risk and served streets,
+  navigation links (Google Maps / Waze, by the address), and — where the same building
+  was a polling site in 2022 — that year's turnout against the city and the country,
+  and its three largest lists, **as plain text**. Stations were renumbered since, so the
+  2022 figures are the building's, and the card says so; 14 of the 57 buildings are new.
+* **Party-neutral by construction**: no potential, no blocs, no camp, and no colour that
+  stands for a party. The test suite asserts it on every scenario (no bloc/potential word
+  on screen, no marker painted outside the risk/area palette).
+
+The list comes as a workbook; `import_station_list.py` copies only station facts from it
+into `data/beit_shemesh/stations_2026.csv` (+ `.meta.json`). The workbook itself — which
+also names the people who run each volunteering place — is not committed.
+
+```sh
+CITY=beit_shemesh python3 import_station_list.py "קלפיות ארצי מעודכן 150926 עם צבעים.xlsx"
+CITY=beit_shemesh ./build.sh
+CITY=beit_shemesh python3 test_map.py
+```
+
+Two rules the importer applies, and the map states: a station's **area** is the
+per-place sheet it is on, and its **risk** is that sheet's colour — the per-place sheets
+are the working lists, and where 7 stations' colours differ from the national sheet the
+national one is kept alongside and shown in the card.
+
+## What the analysis map shows (Haifa)
 
 * **One marker per polling site.** Marker **area** is proportional to the number of
   **eligible voters** the site serves (not the number who voted), so a large pale
@@ -92,7 +141,7 @@ exact building location.
 
 Product requirements, the decisions taken on them and what was deliberately deferred
 are recorded in **`PRODUCT_DECISIONS.md`** — read it before changing the metrics, the
-palette or the mobile layout.
+palette or the mobile layout. The volunteers' map is Round 6 there.
 
 ## Data layers, and the Haifa numbers
 
@@ -129,26 +178,30 @@ pip install -r requirements.txt
 CITY=beit_shemesh ./build.sh    # any other city in config.CITIES
 ```
 
-`build.sh` runs seven stages in order. Each stage reads files from `data/<city>/` and
+`build.sh` runs eight stages in order. Each stage reads files from `data/<city>/` and
 writes one file back there, so stages are independently re-runnable, two cities never
 share a cache, and the network is only touched when a cache file is missing. Geocoding
 results (`data/<city>/geocache.json`) and the Overpass reply (`data/<city>/osm_venues.json`)
 are committed, so a normal rebuild is **offline and takes seconds**. Delete a cache file to
 force a re-fetch; a cold geocoding run costs a few seconds per address (Nominatim is
-rate-limited to 1 req/s) — about 15 minutes for Haifa's 134 addresses.
+rate-limited to 1 req/s) — about 15 minutes for Haifa's 134 addresses. When Nominatim
+cannot be reached at all, the two geocoding stages stop after the first failure instead
+of recording misses, and leave the unanswered addresses for the next run.
 
 Two inputs are national and shared by every city: `data/expb.csv` (results per station)
 and `data/kalpiplaces_25.xlsx` (each station's site, place name and address).
 
 | # | Stage | Reads | Writes | Role |
 |---|---|---|---|---|
-| 1 | `extract.py` | the national files, or `config.MATCHING_XLSX` | `data/<city>/raw.json` | flatten one locality into stations + sites (see Provenance) |
+| 0 | `import_station_list.py` *(manual, volunteer profile)* | the observers' list (xlsx) | `config.STATION_LIST` (+ `.meta.json`) | copy the city's stations — site, address, eligible, risk colour, area, served streets — and nothing else |
+| 1 | `extract.py` | the national files, `config.MATCHING_XLSX`, or `config.STATION_LIST` | `data/<city>/raw.json` | flatten one locality into stations + sites (see Provenance); the volunteer mode also carries the 2022 stations as `history` |
 | 2 | `geocode.py` | `raw.json` | `geocache.json` | address → coordinates via Nominatim, constrained to `config.BBOX` |
 | 3 | `geocode_retry.py` | `geocache.json` | `geocache.json` | second pass for misses: expand abbreviations (שד→שדרות), drop honorifics (ד"ר), flip surname-first names, try spelling variants |
+| 3b | `geocode_overture.py` | `raw.json`, `geocache.json` | `geocache.json` | street-level fallback for addresses still without coordinates: another address on the same street, else the middle of the named street from Overture Maps' OSM street network; entries are marked *provisional* and replaced as soon as Nominatim answers |
 | 4 | `qa_geo.py` | `geocache.json` | — (report only) | assert every hit names `config.CITY_HE` and no two distinct streets share a point |
 | 5 | `snap_osm.py` | `raw.json`, `osm_venues.json` | `osm_snaps.json` | match site names (schools, community centres…) to named OSM buildings in the bbox, accepted only when near the geocoded address |
-| 6 | `build_data.py` | `raw.json` + `geocache.json` + `osm_snaps.json` | `map_data.json` | join all three, aggregate stations → sites, compute turnout / blocs / margin / marker data / map center |
-| 7 | `build_map.py` | `src_map.html`, `src_app.js`, `vendor/*`, `map_data.json` | `config.OUT_HTML` | inline everything into one self-contained HTML file |
+| 6 | `build_data.py` (analysis) / `build_volunteer_data.py` (volunteer) | `raw.json` + `geocache.json` + `osm_snaps.json` | `map_data.json` | join all three, aggregate stations → sites; analysis: turnout / blocs / margin / potential; volunteer: risk, area, the 2022 history per building. Shared helpers in `sitegeo.py` |
+| 7 | `build_map.py` | `src_map.html`, `src_core.js` + the profile's script, `vendor/*`, `map_data.json` | `config.OUT_HTML` | keep the profile's blocks of the template and inline everything into one self-contained HTML file |
 
 Stage 6 **refuses to build** when any site is left without coordinates — a site with no
 coordinates has no marker, so a partly-geocoded city would render as a map that quietly
@@ -156,12 +209,17 @@ omits part of itself. Set `ALLOW_MISSING_COORDS=1` to build one deliberately.
 
 `test_map.py` (stage 8, not in `build.sh`) renders `config.OUT_HTML` headlessly — see Tests.
 
-**Front-end:** edit `src_map.html` (markup + styles) or `src_app.js` (behaviour), then
-re-run `python3 build_map.py`. Never edit the generated HTML directly — it is overwritten.
-The map view, turnout ramp bins and marker sizing live in `src_app.js`; the map center /
-zoom come from `map_data.json` (set in `config.py`). Nothing in the front end names a
-city: the `<title>` and `<h1>` are `__CITY_HE__` tokens substituted by `build_map.py`, and
-every Hebrew sentence that mentions the city builds it from `DATA.city.name`.
+**Front-end:** `src_map.html` is the markup and styles of both profiles — its
+`<!--@analysis-->` / `<!--@volunteer-->` … `<!--@end-->` blocks are the markup only one
+profile has, and `build_map.py` keeps the city's own. Behaviour is `src_core.js` (the
+shared shell: map, markers, labels, the site panel, the table, the phone layout) followed
+by one product script — `src_app.js` (analysis) or `src_volunteer.js` (volunteer); the
+contract between them is at the top of `src_core.js`. Edit those, then re-run
+`python3 build_map.py`. Never edit the generated HTML directly — it is overwritten.
+The map center / zoom come from `map_data.json` (set in `config.py`). Nothing in the front
+end names a city: the `<title>` and `<h1>` are `__CITY_HE__` tokens substituted by
+`build_map.py`, and every Hebrew sentence that mentions the city builds it from
+`DATA.city.name`.
 
 ## Provenance
 
@@ -230,7 +288,12 @@ CITY=beit_shemesh python3 test_map.py         # another city's map
 ```
 
 The suite renders `config.OUT_HTML`, so it follows `CITY` like every other stage, and it
-asserts no fixed site count — it works for any city.
+asserts no fixed site count — it works for any city. The city's profile picks the
+scenario set: the analysis map has the thirty-six below; the volunteers' map has thirty
+of its own (both colour modes in both themes, a building with and without 2022 history,
+both table levels, the area and risk filters, search by street and by station number,
+the about panel, and the same phone reachability checks), and every one of them also
+asserts that nothing on screen leans to a party.
 
 Thirty-six scenarios — light, dark, each of the five color modes, each potential
 target, **both camps**, detail, labels, table, sorting, filter, search, marker interaction

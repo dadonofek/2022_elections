@@ -1,5 +1,11 @@
 # Data pipeline
 openpyxl==3.1.5        # reads the station<->address matching workbook (config.MATCHING_XLSX)
+                       # and the observers' station list (import_station_list.py)
+
+# Only when geocode_overture.py has addresses to place (Nominatim could not answer them):
+# it reads Overture Maps' street network straight from its public parquet release.
+pyarrow>=15
+shapely>=2.0
 
 # Rendering tests only (test_map.py) — skip if you just want to build the map.
 # After installing, run once:  python3 -m playwright install chromium

@@ -1,13 +1,17 @@
-# Handoff — polling-station maps, Knesset 25
+# Handoff — polling-station maps
 
-Deliverable: one self-contained HTML file per city (~560 KB), opens in any browser, no
+Deliverable: one self-contained HTML file per city (~270–560 KB), opens in any browser, no
 server and no API key. Data and Leaflet are inlined; only the OpenStreetMap background
 tiles need network. **UI language is Hebrew (RTL) and must stay Hebrew.**
 
-| city | slug | built |
-|---|---|---|
-| חיפה | `haifa` (default) | `haifa_polling_map.html` — 424 stations, 140 sites, 55.53% turnout |
-| בית שמש | `beit_shemesh` | `beit_shemesh_polling_map.html` — 133 stations, 44 sites, 66.13% turnout |
+| city | slug | profile | built |
+|---|---|---|---|
+| חיפה | `haifa` (default) | analysis | `haifa_polling_map.html` — Knesset 25 (2022): 424 stations, 140 sites, 55.53% turnout |
+| בית שמש | `beit_shemesh` | volunteer | `beit_shemesh_polling_map.html` — the coming election (Knesset 26), list of 15.9.2026: 156 stations, 57 sites, 97,124 eligible |
+
+A city's **profile** (`config.PROFILES`) is what its map is for: `analysis` is the 2022
+results as a campaign tool; `volunteer` is a party-neutral map for election-day
+volunteers choosing where to register. Same pipeline, same map shell, different product.
 
 Pick the city with the `CITY` environment variable: `CITY=beit_shemesh ./build.sh`.
 
@@ -18,22 +22,51 @@ in `build_map.py` was dropped — both are required for `file://` viewing.
 All city/election constants are in **`config.py`**; the pipeline scripts have none of their
 own. See "Adding a city" in `README.md`.
 
-## Beit Shemesh — complete
+## Beit Shemesh — the volunteers' map (Round 6)
 
-**Done.** `data/beit_shemesh/raw.json` holds all 133 stations and all 44 sites, with site
-names and addresses, built by `CITY=beit_shemesh python3 extract.py` from the two official
-national files. Totals: **78,064 eligible · 51,622 voters · 66.13% turnout**. Every station
-has an address; the two files agree on all 44 site groupings. `config.CITIES['beit_shemesh']`
-carries the locality code (2610), the bounding box, the zoom and the two provenance
-sentences the *על הנתונים* panel prints.
+**What it is.** The coordinator of the city's election-day observers asked for a map the
+volunteers use to choose where to register: where their volunteering place's stations
+are, which sit close together, which are risky — sent to every volunteer, so it must not
+lean to a party. `PRODUCT_DECISIONS.md` Round 6 has the asks and the decisions.
 
-Coordinates are complete: 44/44 sites and 133/133 stations map successfully. Location
-precision is 6 named OSM venues, 5 houses, 30 streets and 3 approximate places. The two
-CEC address forms absent from OSM (`הרב איידלשטיין 8`, `סמ ויצ"ו 16`) resolve
-reproducibly through normalized OSM street names in `geocode_retry.py`.
+**Data.** The stations are the coming election's, from the observers' station list — a
+workbook with a national sheet and one sheet per volunteering place (`בית שמש 1` = רמת בית
+שמש, `בית שמש 2` = the old city). `import_station_list.py` copies only station facts from
+it into `data/beit_shemesh/stations_2026.csv` + `.meta.json` (the workbook also names the
+people who run each place; it is never read past the station sheets, and never committed).
+`extract.py`'s `volunteer` mode groups the stations into sites by place name + address and
+carries the 2022 stations of the locality (read the `cec` way) as `history`;
+`build_volunteer_data.py` matches each 2026 building to its 2022 counterpart — same
+address, else the same place name within 600 m — and attaches turnout and the three
+largest lists. 43 of 57 buildings match (38 address+name, 3 address, 2 name); 14 are new;
+one 2022 site (`חמדת - עץ הדעת`, יואל הנביא 5) has no 2026 successor.
+
+**Coordinates.** 41 of the 57 addresses were already in the geocache from the 2022 build.
+The 16 new ones could not be sent to Nominatim from the build sandbox (no route to it), so
+`geocode_overture.py` placed them at street level — 3 on another address of the same street,
+13 at the middle of the named street in Overture Maps' OSM street network, each on the run
+nearest its own sub-quarter's sites. They are marked `provisional` in `geocache.json`:
+**run `CITY=beit_shemesh ./build.sh` from a machine that can reach Nominatim** and
+`geocode.py` / `geocode_retry.py` will replace any it can answer. The site card says where a
+position is street-level, and every card has navigation links by the address itself.
 
 `build_data.py` still **refuses** to emit a map while any site lacks coordinates
 (override with `ALLOW_MISSING_COORDS=1`), so a future half-geocoded city cannot ship quietly.
+
+**Open with the list's owner** (none blocks the map):
+* the list has a `בית שמש 3` sheet (22 old-city stations for a third community, per the
+  list's status sheet) that is still **empty** — until it is filled those stations show as
+  `בית שמש 2`; the about panel says the third place exists with no stations yet;
+* at **7 stations** (6, 18, 23, 28, 29, 45, 75) the `בית שמש 2` sheet's colour differs from
+  the national sheet's; the map follows the area sheet and shows the national colour
+  beside it in the card.
+
+**Updating the list:** `CITY=beit_shemesh python3 import_station_list.py "<list>.xlsx"`,
+then `CITY=beit_shemesh ./build.sh` and `CITY=beit_shemesh python3 test_map.py`. A new
+address goes through the same geocoding stages; nothing else needs touching.
+
+**Superseded:** the 2022 analysis build of Beit Shemesh (133 stations, 44 sites,
+potential/blocs). Its data now appears only as the per-building 2022 history.
 
 Do **not** substitute the Google-geocoded `output/locations.tsv` from
 JacobWeinbren/Israel-Revised: it covers only 13 of the 44 addresses exactly and 9 more at
@@ -48,10 +81,12 @@ them. Half a map is worse than none.
 * Each city caches under `data/<slug>/` (`raw.json`, `geocache.json`, `osm_venues.json`,
   `osm_snaps.json`, `map_data.json`). Haifa's files moved there. `data/expb.csv` and
   `data/kalpiplaces_25.xlsx` stay at the top of `data/` — they are national.
-* `extract.py` has two modes. `cec` builds stations and sites straight from the two
+* `extract.py` has three modes. `cec` builds stations and sites straight from the two
   national files and works for **any** locality with no preparation; `workbook` is the old
   hand-built spreadsheet path, which Haifa stays on for its per-site match confidence.
-  The two were compared on Haifa and agree — see README, *Provenance*.
+  The two were compared on Haifa and agree — see README, *Provenance*. `volunteer` (Round 6)
+  reads the coming election's stations from the observers' list and carries `cec`'s 2022
+  stations as history.
 * The front end no longer names a city. `src_map.html` carries `__CITY_HE__` /
   `__N_KALPI__` / `__N_SITES__` tokens that `build_map.py` substitutes, and every Hebrew
   sentence in `src_app.js` that mentions the city builds it from `DATA.city.name`
@@ -59,6 +94,14 @@ them. Half a map is worse than none.
   station-to-address caveat come from `DATA.city.source_note` / `match_note`.
 * Rebuilding Haifa after all of this produced a **byte-identical** `map_data.json` and
   HTML, and all 36 render scenarios still pass.
+* **Profiles** (Round 6). `config.PROFILES` names what a map is for. The front end is
+  `src_core.js` (the shared shell) + one product script — `src_app.js` for `analysis`,
+  `src_volunteer.js` for `volunteer` — and `src_map.html` marks the markup only one profile
+  has with `<!--@analysis-->` / `<!--@volunteer-->` … `<!--@end-->` blocks that
+  `build_map.py` keeps or drops. The split moved Haifa's code verbatim: its `map_data.json`
+  and `raw.json` rebuild **byte-identical**, its HTML differs only in the script and in
+  styles only the volunteer map uses, and all 36 render scenarios produce
+  **pixel-identical** screenshots.
 
 ## Status: the original goal is complete
 
@@ -144,14 +187,16 @@ rate-limited to 1 req/s).
 
 | # | script | reads → writes |
 |---|---|---|
-| 1 | `extract.py` | `config.MATCHING_XLSX` → `data/raw.json` |
-| 2 | `geocode.py` | `raw.json` → `data/geocache.json` (Nominatim, bounded to `config.BBOX`) |
+| 0 | `import_station_list.py` | *(manual, volunteer profile)* the observers' list (xlsx) → `config.STATION_LIST` + `.meta.json` |
+| 1 | `extract.py` | the national files / `config.MATCHING_XLSX` / `config.STATION_LIST` → `data/<city>/raw.json` |
+| 2 | `geocode.py` | `raw.json` → `data/<city>/geocache.json` (Nominatim, bounded to `config.BBOX`; stops at the first network failure instead of caching misses) |
 | 3 | `geocode_retry.py` | `geocache.json` → `geocache.json`; retry pass expands abbreviations (שד→שדרות, drops ד"ר), flips surname-first street names, tries spelling variants |
+| 3b | `geocode_overture.py` | `raw.json` + `geocache.json` → `geocache.json`; street-level, *provisional* fallback for addresses still without coordinates (same street, else Overture's OSM street network) |
 | 4 | `qa_geo.py` | `geocache.json` → report; asserts every hit names `config.CITY_HE` and no two distinct streets share a point |
-| 5 | `snap_osm.py` | `raw.json` + `data/osm_venues.json` → `data/osm_snaps.json` (site name → named OSM building) |
-| 6 | `build_data.py` | `raw.json` + `geocache.json` + `osm_snaps.json` → `data/map_data.json` (blocs, turnout, margin, map center) |
-| 7 | `build_map.py` | `src_map.html` + `src_app.js` + Leaflet + `map_data.json` → `config.OUT_HTML` |
-| 8 | `test_map.py` | headless render checks on `config.OUT_HTML` (not in `build.sh`) |
+| 5 | `snap_osm.py` | `raw.json` + `data/<city>/osm_venues.json` → `data/<city>/osm_snaps.json` (site name → named OSM building) |
+| 6 | `build_data.py` | `raw.json` + `geocache.json` + `osm_snaps.json` → `data/<city>/map_data.json`; the volunteer profile hands over to `build_volunteer_data.py`; shared helpers in `sitegeo.py` |
+| 7 | `build_map.py` | `src_map.html` (the profile's blocks) + `src_core.js` + the profile's script + Leaflet + `map_data.json` → `config.OUT_HTML` |
+| 8 | `test_map.py` | headless render checks on `config.OUT_HTML` (not in `build.sh`); the profile picks the scenario set |
 
 Every stage reads from `data/` and writes one file back, so stages re-run independently.
 `config.py` is the only place with city/election constants.
@@ -162,7 +207,16 @@ overwritten.**
 
 ## Tests
 
-`python3 test_map.py` (all) or `python3 test_map.py dark` (one). 36 scenarios: light, dark,
+The city's profile picks the scenario set. **Volunteer** (`CITY=beit_shemesh python3 test_map.py`):
+30 scenarios — both colour modes in both themes, a building with and one without 2022
+history (navigation links, the 2022 block), labels, both table levels (row counts equal the
+sites / the stations), the area and the risk filter (markers and list follow), search by a
+served street and by station number, the sort, the about panel, the narrow viewport and the
+same thirteen phone scenarios. **Every** scenario also asserts the map does not lean to a
+party: no bloc / potential / camp word on screen, and no marker filled outside the risk or
+area palette. All 30 pass as of handoff.
+
+**Analysis** — `python3 test_map.py` (all) or `python3 test_map.py dark` (one). 36 scenarios: light, dark,
 each color mode, each potential target, both camps, detail, labels, table, sorting, filter,
 search, narrow viewport, and thirteen phone scenarios at 390x844 with touch. Checks JS errors,
 failed requests, horizontal overflow, clipped controls, markers and tiles rendering,
@@ -232,6 +286,14 @@ basemap tiles the suite still runs and marks those rows `*`.
     channels on one variable — a marker was dark because it was big. Size is the
     electorate in every mode now; colour alone carries the metric. Check:
     `radiusModeIndependent`, asserted on every scenario.
+
+16. The table view's level switch said `לפי אתר הצבעה (140)` / `לפי קלפי (424)` in every
+    city's map — Haifa's counts were literals in the template. They are `__N_SITES__` /
+    `__N_KALPI__` tokens now; Haifa's text is unchanged.
+17. `geocode.py` / `geocode_retry.py` cached a **network failure as a miss** (`None`), so an
+    offline run spent ~15 minutes retrying and then told every later run the address did
+    not exist. Three failures in a row now raise `Unreachable`: the stage stops, caches
+    nothing for the addresses it could not ask, and says so.
 
 ## Product decisions
 

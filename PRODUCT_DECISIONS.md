@@ -501,3 +501,120 @@ list of both group selects and of the sort** — the check that would have caugh
 `אופוזיציה רחבה` the moment it went; `pot_opp` asserts the opposition is still one pick;
 `table` and `table_opp` assert the camp's columns are there whichever group is selected;
 `phone_table` asserts the phone's six columns spend one slot on the camp.
+
+---
+
+# Round 6 — Beit Shemesh: a map for the volunteers, not a campaign
+
+**Asked** (the coordinator of the city's election-day observers, 8–22 Sept 2026, after
+seeing the first Beit Shemesh build — which was the Haifa analysis map pointed at Beit
+Shemesh):
+
+* *"Mark the leading parties in each station — don't colour them, election law says it
+  may not be associated with a specific party — and colour in red the stations whose
+  turnout is abnormal."* *"There can't be any party leaning if I send it to everyone"* —
+  and, election law aside, it is something to be careful about.
+* What it is for: help people understand the city, help the coordinator put volunteers
+  who want to be together at stations close to each other, and advise them where to
+  register — volunteers ask for a station themselves.
+* On the first build (voice note): it will help the older volunteers *"who will need to
+  understand where they are registering"* — e.g. colour one area's stations.
+* Then the updated station list, *"with colours"*, *"to update what we talked about — the
+  stations and how they are shown"*.
+
+**Decided: a second profile, not a mode of the analysis map.**
+
+## 6.1 Why a profile
+
+The analysis map is a campaign tool and says so — its default is the potential of
+הדמוקרטים. A neutral *mode* on it would still ship the campaign to every volunteer in the
+same file, one tap away. So `config.PROFILES` names what a map is for, and the Beit Shemesh
+build (`volunteer`) has none of it: no potential, no blocs, no camp, no colour for a party.
+What the two share is the shell — map, markers, labels, list, card, table, phone layout —
+now `src_core.js`, with each product in its own script and the template's
+profile-specific markup in `<!--@profile-->` blocks. The split moved Haifa's code
+verbatim; Haifa's data rebuilds byte-identical and its 36 scenarios render
+pixel-identical screenshots.
+
+## 6.2 Colour: the observers' risk level — which is what "red = abnormal turnout" asks
+
+The list's colours are the observers' own national mapping of at-risk stations, built —
+in the coordinator's words — from signs in past elections: turnout that makes no sense
+(*"97–98% where it used to be 70%"*), ballots in the names of the dead. That is the
+judgement "red = abnormal turnout" asks for, made by the people who run the observers,
+with more than turnout behind it. Computing our own flag as well would put a second red
+on the map meaning something else, and the signal it describes is a jump *between*
+elections — the repo holds 2022 only. So the markers wear the list's colours, and the
+2022 turnout is shown per building as a number, against the city and the country.
+
+**Palette, measured.** The list names its categories by colour — אדום, כתום, צהוב — so the
+hues are literal: the dataviz palette's status steps, critical `#d03b3b`, serious
+`#ec835a`, warning `#fab219`, the same in both themes (status colours are mode-invariant).
+All-pairs, CVD separation passes (worst ΔE 11.3, orange↔yellow) but the normal-vision
+floor does not (13.6 against 15, the same pair). Accepted, with the mitigation the status
+palette prescribes: the colour never appears without its word — legend, list row, card,
+panel, table and filter chips all name it — and yellow is one building of 57.
+
+**Area** is categorical: blue and aqua (slots 1 and 3), all-pairs CVD ΔE 23.1 light / 19.6
+dark. Slot 2 is skipped on purpose — an orange area would read as the orange risk level.
+A third area gets violet, which passes in light only (dark ΔE 1.9 against the blue); its
+label is always beside it. HTML marks reference the tokens themselves (`var(--risk-red)`),
+so a theme switch repaints them without a re-render.
+
+## 6.3 A building takes its most severe station's colour
+
+A marker is a building, and a building is where a volunteer stands. One red station in it
+is a red posting. The card lists every station with its own colour, a mixed building says
+so wherever its colour is named (`2 אדום, 1 צהוב`), and the legend states the rule.
+
+## 6.4 Area is a colour mode and a filter
+
+The voice-note ask — show a place's stations so a volunteer sees where they are
+registering — is the `אזור התנדבות` mode (each place its own colour) plus the area
+chips (one place alone). The area is the name of the list's sheet a station is on;
+the list's status sheet gives each place's part of the city (`בית שמש 1` = רמת בית שמש,
+`בית שמש 2` = the old city), kept in `config.CITIES[...]['areas']`.
+
+## 6.5 2022 as text, per building
+
+The leading lists are the building's three largest in 2022 with their share, in plain
+text; turnout sits beside the city's and the country's. It is per **building**, not per
+station: 93 of the 156 station numbers are new, and even a station that kept its number
+changed its voters (641 → 555 eligible at one). A 2026 building is matched to its 2022 one
+by address, else by the same place name within 600 m (a renamed street, a re-worded
+address); 43 of 57 match and the other 14 say *אתר חדש*.
+
+## 6.6 Made for finding a station
+
+* Search covers the **streets whose voters each station serves** (a column of the list),
+  so a volunteer can find their own street's station — or a friend's.
+* The card has **navigation by address** (Google Maps, Waze): a street-level marker can
+  sit a few hundred metres from the building, and the address is what a phone's map app
+  resolves best.
+* The list opens **red first**, then by station number.
+
+## 6.7 Neutrality is a test, not a promise
+
+Every volunteer scenario asserts that no bloc, potential or camp word is on screen and
+that every marker's fill is in the risk or area palette. The about panel says it in words:
+*המפה אינה מזוהה עם אף מפלגה*.
+
+## 6.8 The list, and what stays out of the repo
+
+The workbook also names the people who run each volunteering place. It is never
+committed (`*.xlsx` is ignored), and `import_station_list.py` reads only the station
+sheets. Where the per-place sheet and the national sheet disagree on a colour (7
+stations), the per-place sheet wins — it is the working list — and the national colour is
+shown beside it in the card and listed in the about panel.
+
+## 6.9 Deferred
+
+* **Our own cross-election turnout flag** — needs Knesset 21–24 per-station results and a
+  station match across renumbering; the list's colours already carry the judgement.
+* **Who is at which station**, and matching volunteers by preference — the volunteer data
+  stays in the network's own system; this map holds none.
+* **`בית שמש 3`** — the list has the sheet but no stations yet; filling it is a list
+  update, no code.
+* **Sixteen provisional positions** — new addresses placed at street level while Nominatim
+  was unreachable; a networked rebuild replaces them (see `HANDOFF.md`).
+* The phone legend is as large as Haifa's; making it collapsible would serve both maps.

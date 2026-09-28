@@ -570,7 +570,7 @@ so wherever its colour is named (`2 אדום, 1 צהוב`), and the legend state
 ## 6.4 Area is a colour mode and a filter
 
 The voice-note ask — show a place's stations so a volunteer sees where they are
-registering — is the `אזור התנדבות` mode (each place its own colour) plus the area
+registering — is the `אזור התנדבות` mode (renamed `אשכול` in Round 7; each place its own colour) plus the area
 chips (one place alone). The area is the name of the list's sheet a station is on;
 the list's status sheet gives each place's part of the city (`בית שמש 1` = רמת בית שמש,
 `בית שמש 2` = the old city), kept in `config.CITIES[...]['areas']`.
@@ -618,3 +618,54 @@ shown beside it in the card and listed in the about panel.
 * **Sixteen provisional positions** — new addresses placed at street level while Nominatim
   was unreachable; a networked rebuild replaces them (see `HANDOFF.md`).
 * The phone legend is as large as Haifa's; making it collapsible would serve both maps.
+
+---
+
+# Round 7 — clusters and station numbers
+
+**Asked** (the coordinator, after sharing *yalla-kalpi*, a station finder with a Waze button
+per station): *"if you manage to make a tool like that for Beit Shemesh — a map with the
+different clusters and the station numbers, so people can sign themselves up — it would
+help a lot. The other tool is only for getting to the station; it doesn't help find
+clusters so people can register together."* Asked which clusters: *"these are the
+clusters — per colour"*, with the station list.
+
+## 7.1 The clusters are the list's own
+
+The list colours its per-place sheets by the volunteer community that staffs them — the
+tab colours, and the rows of the list's status sheet — and within Beit Shemesh that is one
+sheet per place: `בית שמש 1`, `בית שמש 2`, and `בית שמש 3` (still empty). Those are the
+clusters, and they were already the map's `area`. Nothing is recomputed: a walking-distance
+clustering was proposed (23 groups of 3–12 stations within ~600 m) and dropped the moment
+the list's own grouping was named, because a volunteer registers into the list's cluster,
+not the map's. On screen the word is **אשכול** everywhere — the mode, the chips, the legend,
+the card, the table, the about panel; in the data and code it stays `area`.
+
+## 7.2 What the map opens on
+
+* **Colour = cluster** by default; the risk colours are the second mode. The ask is
+  "where do we sign up together", and the risk level is an attribute of the stations
+  within that choice.
+* **Every building is labelled with its station numbers** — the thing a volunteer
+  registers by — with sub-stations collapsed to a range (`112.1–112.7`). The label button
+  now reads *מספרי קלפיות* and starts pressed. At city zoom a label that collides below
+  its marker tries above, right and left before it is dropped (`LABEL_SIDES`), and a side
+  that would cover another building's marker counts as a collision
+  (`LABEL_CLEAR_MARKERS`) — numbers drawn on a neighbour read as the neighbour's, which
+  is worse than a missing label. Zooming in brings the rest, and the legend says so.
+  Haifa keeps its name labels, below only, off.
+* **The list is a sign-up sheet**: sorted by cluster (the new default), it shows a sticky
+  header per cluster — its part of the city, its stations and buildings — and the
+  cluster's buildings in station-number order. Any other sort is a flat list.
+* The header's first three tiles (all a phone shows) are the city's stations and each
+  cluster's.
+* The card leads with the cluster and the station numbers, then the risk level.
+
+## 7.3 Not done
+
+* **Exact positions from yalla-kalpi.** Suggested as the place to settle the 16
+  street-level positions; `yalla-kalpi.pages.dev` is blocked from the build sandbox, so
+  whether it carries coordinates (rather than only addresses for Waze) is unchecked. The
+  cards' Waze / Google Maps links already navigate by the exact address.
+* **A sign-up link** on the map — the recruitment form exists, but whether it belongs on a
+  public page is the coordinator's call.

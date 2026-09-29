@@ -7,8 +7,9 @@ kinds of map — a city's **profile** (`config.PROFILES`) says which:
 * **analysis** (Haifa) — the November 2022 Knesset election as a campaign tool: official
   results, turnout, potential, blocs and a full per-party breakdown for every station.
 * **volunteer** (Beit Shemesh) — the *coming* election's stations for the election-day
-  volunteers who pick where to register: coloured by the observers' risk level or by
-  volunteering area, and deliberately **party-neutral**. See *The volunteers' map* below.
+  volunteers who pick where to register: each building labelled with its station numbers,
+  coloured by cluster (אשכול) or by the observers' risk level, and deliberately
+  **party-neutral**. See *The volunteers' map* below.
 
 Open the map file in any browser — no server, no build step, no API key. The file embeds
 Leaflet and the whole dataset; only the OpenStreetMap background tiles need an internet
@@ -38,21 +39,30 @@ site rather than presenting every result as an exact building location.
 
 ## The volunteers' map (Beit Shemesh)
 
-Asked for by the coordinator of the city's observers: a map the volunteers use to see
-where the stations of their volunteering place are, which sit close together (so friends
-can register near each other), and where the risky ones are — **not** a results analysis.
-It goes to every volunteer, so nothing on it may lean to a party.
+Asked for by the coordinator of the city's observers: a map the volunteers use to find a
+**cluster** and its **station numbers**, so people who want to be together can sign
+themselves up for stations close to each other — and to see where the risky ones are.
+**Not** a results analysis, and not a route finder (yalla-kalpi does that). It goes to
+every volunteer, so nothing on it may lean to a party.
 
+* **Clusters (אשכולות)** are the list's own: one per per-place sheet (`בית שמש 1` = רמת בית
+  שמש, `בית שמש 2` = the old city, `בית שמש 3` still empty), each sheet coloured by the
+  volunteer community that staffs it. In the data and code a cluster is an `area`.
 * **One marker per building**, area ∝ the building's eligible voters in the coming
-  election. Colour has two modes:
-  * *רמת סיכון* (default) — the risk colour the observers' list gives each station, in the
+  election, **labelled with its station numbers** (sub-stations collapse to a range,
+  `112.1–112.7`); a label that collides below its marker tries the other three sides
+  before it is dropped — it never covers another label or another building's marker, so
+  it can't be read as that building's — and zooming in brings the rest. Colour has two modes:
+  * *אשכול* (default) — which cluster the building belongs to.
+  * *רמת סיכון* — the risk colour the observers' list gives each station, in the
     list's own words: אדום / כתום / צהוב. A building takes its most severe station's
     colour; a mixed building says so in its card.
-  * *אזור התנדבות* — which volunteering place's list the station is on (`בית שמש 1` =
-    רמת בית שמש, `בית שמש 2` = the old city).
-* **Filters** by volunteering area and by risk level, and a search over station number,
-  building, address and the **streets whose voters each station serves** — so a
-  volunteer can find the station of their own street. The list is sorted red-first.
+* **The list is a sign-up sheet**: by default a header per cluster (its part of the city,
+  its stations and buildings) with the cluster's buildings under it in station-number
+  order. Any other sort is a flat list.
+* **Filters** by cluster and by risk level, and a search over station number, building,
+  address, cluster and the **streets whose voters each station serves** — so a volunteer
+  can find the station of their own street.
 * **The card** of a building: its stations with their risk and served streets,
   navigation links (Google Maps / Waze, by the address), and — where the same building
   was a polling site in 2022 — that year's turnout against the city and the country,
@@ -72,10 +82,10 @@ CITY=beit_shemesh ./build.sh
 CITY=beit_shemesh python3 test_map.py
 ```
 
-Two rules the importer applies, and the map states: a station's **area** is the
-per-place sheet it is on, and its **risk** is that sheet's colour — the per-place sheets
-are the working lists, and where 7 stations' colours differ from the national sheet the
-national one is kept alongside and shown in the card.
+Two rules the importer applies, and the map states: a station's **cluster** (`area`) is
+the per-place sheet it is on, and its **risk** is that sheet's colour — the per-place
+sheets are the working lists, and where 7 stations' colours differ from the national sheet
+the national one is kept alongside and shown in the card.
 
 ## What the analysis map shows (Haifa)
 
@@ -289,11 +299,14 @@ CITY=beit_shemesh python3 test_map.py         # another city's map
 
 The suite renders `config.OUT_HTML`, so it follows `CITY` like every other stage, and it
 asserts no fixed site count — it works for any city. The city's profile picks the
-scenario set: the analysis map has the thirty-six below; the volunteers' map has thirty
-of its own (both colour modes in both themes, a building with and without 2022 history,
-both table levels, the area and risk filters, search by street and by station number,
-the about panel, and the same phone reachability checks), and every one of them also
-asserts that nothing on screen leans to a party.
+scenario set: the analysis map has the thirty-six below; the volunteers' map has thirty-one
+of its own (both colour modes in both themes, station-number labels on, off and zoomed,
+the list's cluster headers, a building with and without 2022 history, both table levels,
+the cluster and risk filters, search by street and by station number, the about panel,
+and the same phone reachability checks), and every one of them also asserts that nothing
+on screen leans to a party. On both maps every scenario also checks that each map label
+sits beside its own marker, that no two labels overlap, and that the hover card is
+centred on its marker.
 
 Thirty-six scenarios — light, dark, each of the five color modes, each potential
 target, **both camps**, detail, labels, table, sorting, filter, search, marker interaction

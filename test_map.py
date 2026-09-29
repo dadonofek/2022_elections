@@ -125,6 +125,32 @@ CHECKS_JS = '''() => {
   r.headerH = Math.round(box('header').height);
   r.filtersOpen = q('#filters')?.open;
 
+  // --- map labels and the hover card: each beside its own marker. An RTL page once drew
+  // every Leaflet tooltip a full tooltip-width left of where Leaflet put it.
+  r.labelsOffMarker = []; r.labelsOnMarkers = []; r.labelOverlaps = 0; r.tipOffCentre = null;
+  if (mapShown) {
+    const mr = box('#map');
+    const at = ll => { const p = map.latLngToContainerPoint(ll); return { x: p.x + mr.left, y: p.y + mr.top }; };
+    const gap = (b, p) => Math.hypot(Math.max(b.left - p.x, 0, p.x - b.right), Math.max(b.top - p.y, 0, p.y - b.bottom));
+    const dots = [...markers.values()].filter(m => map.hasLayer(m)).map(m => ({ ...at(m.getLatLng()), r: m.getRadius() }));
+    const labs = [];
+    labelLayer.eachLayer(m => labs.push({ text: m.getTooltip().getElement().textContent.trim(),
+      b: m.getTooltip().getElement().getBoundingClientRect(), p: at(m.getLatLng()) }));
+    for (const l of labs) {
+      const own = dots.find(d => Math.abs(d.x - l.p.x) < 0.5 && Math.abs(d.y - l.p.y) < 0.5);
+      if (!own || gap(l.b, own) > own.r + 8) r.labelsOffMarker.push(l.text);
+      if (dots.some(d => d !== own && gap(l.b, d) < d.r + 1)) r.labelsOnMarkers.push(l.text);
+    }
+    labs.forEach((a, i) => labs.slice(i + 1).forEach(c => {
+      if (a.b.left < c.b.right && c.b.left < a.b.right && a.b.top < c.b.bottom && c.b.top < a.b.bottom) r.labelOverlaps++;
+    }));
+    markers.forEach(m => {
+      if (!m.getTooltip()?.isOpen()) return;        // phones bind no hover card
+      const b = m.getTooltip().getElement().getBoundingClientRect(), p = at(m.getLatLng());
+      r.tipOffCentre = Math.max(r.tipOffCentre ?? 0, Math.round(Math.abs((b.left + b.right) / 2 - p.x)));
+    });
+  }
+
   // --- the volunteer profile ---
   r.nSites = sites.length;
   r.nKalpi = DATA.city.n_kalpi;
@@ -138,6 +164,9 @@ CHECKS_JS = '''() => {
   r.aboutOpen = !(q('#about')?.classList.contains('hidden'));
   r.bodyText = document.body.innerText;
   r.areaChips = document.querySelectorAll('#areaChips .chip').length;
+  r.labelTexts = [...document.querySelectorAll('.leaflet-tooltip.lbl')].map(e => e.textContent.trim());
+  r.groups = document.querySelectorAll('#list .grp').length;
+  r.nAreas = (DATA.city.areas || []).length;
   r.riskChips = document.querySelectorAll('#riskChips .chip').length;
   return r;
 }'''
@@ -284,52 +313,62 @@ V_KALPI_KEYS = ['kalpi', 'barzel', 'name', 'address', 'area', 'risk', 'eligible'
 fills_in = lambda pal: lambda c: set(c['markerFills']) <= set(c[pal]) and len(c['markerFills']) > 0
 visible_is = lambda js_expr: lambda c: c['visibleCount'] == js_expr(c)
 volunteer_scenarios = {
-  'light':      ('light', (), {}, {'sidebarRightOfMap': True, 'mode': 'risk', 'sort': 'risk', 'mapModeUsable': False,
-                                   'legendTitle': 'רמת סיכון', 'statFirst': 'קלפיות', 'sizeIsEligible': True,
-                                   'sortOptions': ['risk', 'kalpi', 'area', 'eligible', 'name'],
-                                   'riskFill': fills_in('riskFills'),
+  # the map opens on the clusters, every marker labelled with its station numbers, and
+  # the list as a sign-up sheet: a header per cluster, its buildings in station order
+  'light':      ('light', (), {}, {'sidebarRightOfMap': True, 'mode': 'area', 'sort': 'area', 'mapModeUsable': False,
+                                   'legendTitle': 'אשכול', 'statFirst': 'קלפיות', 'sizeIsEligible': True,
+                                   'sortOptions': ['area', 'risk', 'kalpi', 'eligible', 'name'],
+                                   'areaFill': fills_in('areaFills'),
+                                   'numberLabels': lambda c: len(c['labelTexts']) > 0
+                                                   and all(any(ch.isdigit() for ch in t) for t in c['labelTexts']),
+                                   'clusterHeaders': lambda c: c['groups'] == c['nAreas'] > 0,
                                    'allMarkers': lambda c: c['markers'] == c['nSites'] and c['visibleCount'] == c['nSites'],
                                    'chips': lambda c: c['areaChips'] >= 1 and c['riskChips'] >= 1}),
-  'dark':       ('dark', (), {}, {'riskFill': fills_in('riskFills')}),
-  'area':       ('light', (mode('area'),), {}, {'mode': 'area', 'legendTitle': 'אזור התנדבות',
-                                                'areaFill': fills_in('areaFills')}),
-  'area_dark':  ('dark', (mode('area'),), {}, {'areaFill': fills_in('areaFills')}),
+  'dark':       ('dark', (), {}, {'areaFill': fills_in('areaFills')}),
+  'risk':       ('light', (mode('risk'),), {}, {'mode': 'risk', 'legendTitle': 'רמת סיכון',
+                                                'riskFill': fills_in('riskFills')}),
+  'risk_dark':  ('dark', (mode('risk'),), {}, {'riskFill': fills_in('riskFills')}),
   # the card of a building that was a polling site in 2022, and of a new one
   'detail':     ('light', (openSite('s.h22'),), {},
                  {'detailOpen': True, 'navLinks': lambda c: len(c['navLinks']) == 2 and all('%' in u for u in c['navLinks']),
                   'h22Shown': lambda c: 'אחוז הצבעה באתר' in c['detailText'] and 'הרשימות הגדולות' in c['detailText']}),
   'detail_new': ('light', (openSite('!s.h22'),), {},
                  {'detailOpen': True, 'newSite': lambda c: 'אתר חדש' in c['detailText']}),
-  'labels':     ('light', (click('#btnLabels'), do("map.setZoom(15)")), {}, {}),
+  # the labels toggle off, and come back denser on zoom
+  'labels_off': ('light', (click('#btnLabels'),), {}, {'noLabels': lambda c: c['labelTexts'] == []}),
+  'labels_zoom':('light', (do("map.setZoom(15)"),), {}, {'numberLabels': lambda c: len(c['labelTexts']) > 0}),
   'table':      ('light', (click('#btnTable'),), {}, {'coveredByTable': True, 'tableKeys': V_SITE_KEYS,
                                                       'rows': lambda c: c['tableRows'] == c['nSites']}),
   'table_kalpi':('light', (click('#btnTable'), click('#tvSeg button[data-level="kalpi"]')), {},
                  {'coveredByTable': True, 'tableKeys': V_KALPI_KEYS,
                   'rows': lambda c: c['tableRows'] == c['nKalpi']}),
-  # one area's chip off: only the other area's buildings are left, on the map and in the list
+  # one cluster's chip off: only the other cluster's buildings are left, on the map and in the list
   'filter_area':('light', (chip('areaChips', 'בית שמש 2'),), {},
                  {'onlyArea1': lambda c: 0 < c['visibleCount'] < c['nSites'] and c['markers'] == c['visibleCount']
-                                         and c['listItems'] == c['visibleCount']}),
+                                         and c['listItems'] == c['visibleCount'] and c['groups'] == 1}),
   'filter_risk':('light', (chip('riskChips', 'red'),), {},
                  {'noRed': lambda c: 0 < c['visibleCount'] < c['nSites'] and c['markers'] == c['visibleCount']}),
   # a street where voters live finds the station that serves it
   'search_street': ('light', (search('אשכול לוי'),), {},
                  {'found': lambda c: 0 < c['visibleCount'] < c['nSites']}),
   'search_kalpi':  ('light', (search('112.3'),), {}, {'found': lambda c: c['visibleCount'] == 1}),
-  'sort_area':  ('light', (sort('area'),), {}, {'sort': 'area'}),
+  # any other sort is a flat list, without the cluster headers
+  'sort_risk':  ('light', (sort('risk'),), {}, {'sort': 'risk', 'flat': lambda c: c['groups'] == 0}),
   'about':      ('light', (click('#btnAbout'),), {}, {'aboutOpen': True,
                  'aboutSays': lambda c: 'אינה מזוהה עם אף מפלגה' in c['bodyText']}),
   'narrow':     ('light', (), dict(width=900, height=1100), {}),
 
   # ---- phone scenarios: every one asserts REACHABILITY, not DOM presence ----
   'phone_map':   ('light', (), PHONE, {'view': 'map', 'modeSegUsable': False, 'mapModeUsable': True,
-                                       'mapMode': 'risk', 'mapPotShown': False}),
-  'phone_mapmode': ('light', (mapMode('area'),), PHONE,
-                  {'view': 'map', 'mode': 'area', 'mapMode': 'area', 'legendTitle': 'אזור התנדבות',
-                   'mapModeUsable': True, 'areaFill': fills_in('areaFills')}),
-  'phone_mapmode_sync': ('light', (view('list'), click('#filters > summary'), mode('area'), view('map')), PHONE,
-                  {'view': 'map', 'mapMode': 'area'}),
-  'phone_list':  ('light', (view('list'),), PHONE, {'view': 'list', 'listOnScreen': True, 'sortUsable': True}),
+                                       'mapMode': 'area', 'mapPotShown': False,
+                                       'numberLabels': lambda c: len(c['labelTexts']) > 0}),
+  'phone_mapmode': ('light', (mapMode('risk'),), PHONE,
+                  {'view': 'map', 'mode': 'risk', 'mapMode': 'risk', 'legendTitle': 'רמת סיכון',
+                   'mapModeUsable': True, 'riskFill': fills_in('riskFills')}),
+  'phone_mapmode_sync': ('light', (view('list'), click('#filters > summary'), mode('risk'), view('map')), PHONE,
+                  {'view': 'map', 'mapMode': 'risk'}),
+  'phone_list':  ('light', (view('list'),), PHONE, {'view': 'list', 'listOnScreen': True, 'sortUsable': True,
+                                                    'clusterHeaders': lambda c: c['groups'] == c['nAreas'] > 0}),
   'phone_filt':  ('light', (view('list'), click('#filters > summary')), PHONE, {'searchUsable': True, 'filtersOpen': True}),
   'phone_menu':  ('light', (click('#btnMenu'),), PHONE, {'menuOpen': True}),
   'phone_stats': ('light', (click('#btnStatsMore'),), PHONE,
@@ -372,6 +411,11 @@ if __name__ == "__main__":
         if c.get('coveredByTable') is False: problems.append('table view does not cover the map')
         if c.get('radiusModeIndependent') is False:
             problems.append('marker radius changes with the colour mode')
+        if c['labelsOffMarker']: problems.append(f"labels away from their marker: {c['labelsOffMarker'][:3]}")
+        if c['labelOverlaps']: problems.append(f"{c['labelOverlaps']} pairs of map labels overlap")
+        if (c['tipOffCentre'] or 0) > 2: problems.append(f"hover card {c['tipOffCentre']}px off its marker")
+        if config.PROFILE == 'volunteer' and c['labelsOnMarkers']:
+            problems.append(f"labels over another site's marker: {c['labelsOnMarkers'][:3]}")
         if 'table' not in n and c['markers'] == 0 and c['view'] != 'list':
             problems.append('no markers rendered')
         if c['tiles'] == 0 and c['view'] != 'list' and not offline:

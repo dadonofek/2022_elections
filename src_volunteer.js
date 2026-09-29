@@ -1,8 +1,13 @@
 // ================================================================ the volunteers' map
 // For the election-day volunteers of one city: every polling station of the coming
-// election, one marker per building, coloured by the observers' risk level or by
-// volunteering area — so a volunteer can see where their place's stations are, which
-// of them sit close together, and where the red ones are, and register accordingly.
+// election, one marker per building, labelled with its station numbers and coloured by
+// CLUSTER (אשכול) or by the observers' risk level — so volunteers who want to be
+// together can find a cluster, see which of its stations sit close to each other, and
+// register for them by number.
+//
+// A cluster is one of the list's per-place sheets ("בית שמש 1", "בית שמש 2", ...), which
+// the list colours by the volunteer community that staffs it. In the data and the code it
+// is still `area`; on screen it is always "אשכול", the word the coordinators use.
 //
 // NOTHING on this map leans to a party. No colour anywhere stands for a party or a
 // bloc, and there is no potential. Where the building was a polling site in 2022, its
@@ -35,7 +40,7 @@ const AREA_KEYS = [...AREAS.map(a => a.key), ...(HAS_UNASSIGNED ? [''] : [])];
 const areaToken = k => (AREA_IDX[k] ?? 9) < 3 ? `--area-${AREA_IDX[k]}` : '--area-none';
 const areaColor = k => cssVar(areaToken(k));
 const areaVar = k => `var(${areaToken(k)})`;
-const areaLabel = k => k || 'ללא אזור';
+const areaLabel = k => k || 'ללא אשכול';
 const areaDesc = k => (AREAS.find(a => a.key === k) || {}).desc || '';
 
 const dot = (color, inline) => `<span class="dot${inline ? ' i' : ''}" style="background:${color}"></span>`;
@@ -43,6 +48,32 @@ const nSites = n => (n === 1 ? 'אתר אחד' : `${num(n)} אתרים`);
 const nKalpi = n => (n === 1 ? 'קלפי אחת' : `${num(n)} קלפיות`);
 const kalpiList = s => s.kalpiot.map(k => k.kalpi).join(', ');
 const kalpiWord = s => (s.n_kalpi === 1 ? 'קלפי' : 'קלפיות');
+// A building's station numbers, short enough to sit beside its marker: sub-stations of
+// one number collapse into a range ("112.1–112.7"), the rest are listed ("121 · 125").
+function compactKalpi(s) {
+  const groups = new Map();
+  for (const k of s.kalpiot) {
+    const [whole, part] = k.kalpi.split('.');
+    if (!groups.has(whole)) groups.set(whole, []);
+    if (part != null) groups.get(whole).push(+part);
+  }
+  return [...groups].map(([whole, parts]) => {
+    if (!parts.length) return whole;
+    parts.sort((a, b) => a - b);
+    const run = parts.every((x, i) => i === 0 || x === parts[i - 1] + 1);
+    return parts.length > 2 && run ? `${whole}.${parts[0]}–${whole}.${parts[parts.length - 1]}`
+      : parts.map(x => `${whole}.${x}`).join(' · ');
+  }).join(' · ');
+}
+// the map's labels are the station numbers — the thing a volunteer registers by
+const labelText = compactKalpi;
+const labelTitle = (shown, total) => (shown < total
+  ? `מספרי הקלפיות של ${shown} מתוך ${total} האתרים שבתצוגה — התקרבו כדי לראות עוד`
+  : 'מספרי הקלפיות של כל האתרים שבתצוגה');
+// a label that collides below its marker tries the other sides before it is dropped, and
+// never sits on another building's marker — numbers there would read as that building's
+const LABEL_SIDES = ['bottom', 'top', 'right', 'left'];
+const LABEL_CLEAR_MARKERS = true;
 // a building whose stations are not all one colour says so wherever its colour is named
 const riskMix = s => Object.keys(s.risk_counts).length > 1
   ? RISK_ORDER.filter(r => s.risk_counts[r]).map(r => `${s.risk_counts[r]} ${riskLabel(r)}`).join(', ') : '';
@@ -57,20 +88,22 @@ const gmapsUrl = s => `https://www.google.com/maps/search/?api=1&query=${encodeU
 const wazeUrl = s => `https://waze.com/ul?q=${encodeURIComponent(navQuery(s))}&navigate=yes`;
 
 const colorOf = s => (state.mode === 'area' ? areaColor(s.area) : riskColor(s.risk));
+const modeDot = s => (state.mode === 'area' ? areaVar(s.area) : riskVar(s.risk));
 
 // '2026-09-15' -> '15.9.2026', the way the lists themselves write dates
 const LIST_DATE = (([y, m, d]) => (d ? `${+d}.${+m}.${y}` : ''))((DATA.city.list_date || '').split('-'));
 
 // ---------------------------------------------------------------- state
 const state = {
-  mode: 'risk',
+  // clusters first: the map is for choosing where to register, and together
+  mode: 'area',
   q: '',
   areas: new Set(AREA_KEYS),
   risks: new Set(RISKS),
-  // red first: the list reads as where volunteers are needed most
-  sort: 'risk',
+  // each cluster's buildings in station-number order, under the cluster's header
+  sort: 'area',
   selected: null,
-  labels: false,
+  labels: true,
   tableLevel: 'site',
   tableSort: { key: 'kalpi', dir: 1 },
 };
@@ -105,8 +138,8 @@ function tipHtml(s) {
   return `<b>${esc(s.name)}</b>
     <div class="r"><span>${esc(addressOf(s))}</span></div>
     <div class="r"><span>${kalpiWord(s)} ${esc(kalpiList(s))}</span><span>${num(s.eligible)} בעלי זכות</span></div>
-    <div class="lead">${dot(riskVar(s.risk))}<span>${riskLabel(s.risk)}${mix ? ` (${mix})` : ''}</span>
-      ${dot(areaVar(s.area))}<span>${esc(areaLabel(s.area))}</span></div>
+    <div class="lead">${dot(areaVar(s.area))}<span>${esc(areaLabel(s.area))}</span>
+      ${dot(riskVar(s.risk))}<span>${riskLabel(s.risk)}${mix ? ` (${mix})` : ''}</span></div>
     <div class="r"><span>${s.h22 ? `2022: הצבעה ${pct(s.h22.turnout)}` : 'אתר חדש — לא פעל ב-2022'}</span></div>`;
 }
 
@@ -115,10 +148,11 @@ function cardHtml(s) {
   const mix = riskMix(s);
   return `<div class="mcard">
     <b>${esc(s.name)}</b>
-    <div class="ad">${esc(addressOf(s))} · ${kalpiWord(s)} ${esc(kalpiList(s))}</div>
+    <div class="ad">${esc(addressOf(s))}</div>
+    <div class="row"><span>אשכול</span><span class="v">${dot(areaVar(s.area))}${esc(areaLabel(s.area))}</span></div>
+    <div class="row"><span>${kalpiWord(s)}</span><span class="v wrap">${esc(compactKalpi(s))}</span></div>
     <div class="row"><span>רמת סיכון</span><span class="v">${dot(riskVar(s.risk))}${riskLabel(s.risk)}</span></div>
     ${mix ? `<div class="row"><span></span><span class="v muted" style="font-weight:400">${mix}</span></div>` : ''}
-    <div class="row"><span>אזור התנדבות</span><span class="v">${dot(areaVar(s.area))}${esc(areaLabel(s.area))}</span></div>
     <div class="row"><span>בעלי זכות בחירה</span><span class="v">${num(s.eligible)}</span></div>
     <div class="row"><span>הצבעה ב-2022</span><span class="v">${s.h22 ? pct(s.h22.turnout) : 'אתר חדש'}</span></div>
     <button class="btn primary mcard-more" data-id="${s.id}">כל הפרטים על האתר</button>
@@ -128,13 +162,14 @@ function cardHtml(s) {
 // ---------------------------------------------------------------- header stats
 function renderStats() {
   const c = DATA.city;
-  // the first three ride along on a phone; the rest wait behind "עוד"
+  // the first three ride along on a phone — the city and its first two clusters; the
+  // rest wait behind "עוד"
   const tiles = [
     ['קלפיות', num(c.n_kalpi)],
+    ...AREAS.map(a => [`קלפיות ב${a.key}`, num(a.n_kalpi)]),
     ['אתרי הצבעה', num(c.n_sites)],
     ...RISKS.map(r => [`קלפיות ${RISK_PLURAL[r]}`, num(c.risk_kalpi[r])]),
     ['בעלי זכות בחירה', num(c.eligible)],
-    ...AREAS.map(a => [`קלפיות ב${a.key}`, num(a.n_kalpi)]),
   ];
   $('#stats').innerHTML = tiles.map(([k, v]) => `<div class="stat"><div class="v">${v}</div><div class="k">${esc(k)}</div></div>`).join('');
 }
@@ -143,19 +178,24 @@ function renderStats() {
 function renderLegend() {
   const el = $('#legend');
   const vis = visible();
-  // the risk level's reading fits beside its word; an area's part of the city goes under it
-  const row = (color, label, note, n, under) =>
+  // the risk level's reading fits beside its word; a cluster's part of the city goes under
+  // it, and a cluster counts STATIONS — what volunteers register for
+  const row = (color, label, note, n, count, under) =>
     `<div class="legend-row"${n ? '' : ' style="opacity:.45"'}><span class="sw" style="background:${color}"></span>
        <span>${esc(label)}${note ? (under ? `<br><span class="muted sub">${esc(note)}</span>`
                                           : ` <span class="muted">· ${esc(note)}</span>`) : ''}</span>
-       <span class="n nowrap">${nSites(n)}</span></div>`;
+       <span class="n nowrap">${count}</span></div>`;
   if (state.mode === 'area') {
-    el.innerHTML = `<h3>אזור התנדבות</h3>` +
-      AREA_KEYS.map(k => row(areaVar(k), areaLabel(k), areaDesc(k), vis.filter(s => s.area === k).length, true)).join('') +
-      sizeLegend();
+    el.innerHTML = `<h3>אשכול</h3>` +
+      AREA_KEYS.map(k => {
+        const n = vis.filter(s => s.area === k).reduce((a, s) => a + s.n_kalpi, 0);
+        return row(areaVar(k), areaLabel(k), areaDesc(k), n, n ? nKalpi(n) : '0 קלפיות', true);
+      }).join('') +
+      `<p class="legend-note">ליד האתרים — מספרי הקלפיות; התקרבו כדי לראות את כולם</p>` + sizeLegend();
   } else {
     el.innerHTML = `<h3>רמת סיכון</h3>` +
-      RISKS.map(r => row(riskVar(r), riskLabel(r), RISK_LEVEL[r], vis.filter(s => s.risk === r).length)).join('') +
+      RISKS.map(r => { const n = vis.filter(s => s.risk === r).length;
+                       return row(riskVar(r), riskLabel(r), RISK_LEVEL[r], n, nSites(n)); }).join('') +
       `<p class="legend-note">אתר עם כמה קלפיות — לפי הקלפי ברמה הגבוהה בו</p>` + sizeLegend();
   }
 }
@@ -166,15 +206,28 @@ function renderList() {
   $('#count').textContent = `${vis.length} מתוך ${sites.length} אתרים`;
   const el = $('#list');
   if (!vis.length) { el.innerHTML = `<div class="empty">אין אתרים התואמים לסינון.</div>`; return; }
-  el.innerHTML = vis.map(s => `
+  const row = s => `
     <button class="site" data-id="${s.id}" aria-current="${state.selected === s.id}">
-      <div class="t"><span class="dot" style="background:${state.mode === 'area' ? areaVar(s.area) : riskVar(s.risk)}"></span>
+      <div class="t"><span class="dot" style="background:${modeDot(s)}"></span>
         <span class="nm">${esc(s.name)}</span>
         <span class="pill" style="margin-inline-start:auto">${nKalpi(s.n_kalpi)}</span></div>
       <div class="ad">${esc(addressOf(s))} · ${kalpiWord(s)} ${esc(kalpiList(s))}</div>
-      <div class="m"><span>${riskLabel(s.risk)}</span><span>${esc(areaLabel(s.area))}</span>
+      <div class="m"><span>${esc(areaLabel(s.area))}</span><span>${riskLabel(s.risk)}</span>
         <span>${h22Short(s)}</span></div>
-    </button>`).join('');
+    </button>`;
+  // sorted by cluster, the list is a sign-up sheet: each cluster under its own header,
+  // its buildings in station-number order
+  if (state.sort !== 'area') { el.innerHTML = vis.map(row).join(''); }
+  else {
+    el.innerHTML = AREA_KEYS.map(k => {
+      const g = vis.filter(s => s.area === k);
+      if (!g.length) return '';
+      const n = g.reduce((a, s) => a + s.n_kalpi, 0);
+      return `<div class="grp">${dot(areaVar(k))}<b>${esc(areaLabel(k))}</b>
+          <span class="muted">${areaDesc(k) ? `${esc(areaDesc(k))} · ` : ''}${nKalpi(n)} ב${g.length === 1 ? 'אתר אחד' : `-${num(g.length)} אתרים`}</span></div>` +
+        g.map(row).join('');
+    }).join('');
+  }
   $$('.site', el).forEach(b => b.addEventListener('click', () => selectSite(+b.dataset.id, true)));
 }
 
@@ -221,10 +274,10 @@ function renderDetail(s) {
         <button class="btn" id="closeDetail" style="margin-inline-start:auto">חזרה</button>
       </div>
       <div class="kpis">
+        <div class="kpi"><div class="v">${dot(areaVar(s.area), true)}${esc(areaLabel(s.area))}</div>
+          <div class="k">אשכול${areaDesc(s.area) ? ` · ${esc(areaDesc(s.area))}` : ''}</div></div>
         <div class="kpi"><div class="v">${dot(riskVar(s.risk), true)}${riskLabel(s.risk)}</div>
           <div class="k">${mix ? esc(mix) : 'רמת סיכון'}</div></div>
-        <div class="kpi"><div class="v">${dot(areaVar(s.area), true)}${esc(areaLabel(s.area))}</div>
-          <div class="k">${esc(areaDesc(s.area) || 'אזור התנדבות')}</div></div>
         <div class="kpi"><div class="v">${num(s.eligible)}</div><div class="k">בעלי זכות בחירה</div></div>
       </div>
       <div class="navlinks">
@@ -265,8 +318,8 @@ function renderAbout() {
        ב${esc(c.election || 'בחירות הקרובות')}, לפי רשימת הקלפיות המעודכנת ל-${esc(date)}.
        ב-${num(c.n_sites)} האתרים יפעלו ${num(c.n_kalpi)} קלפיות; הפירוט לפי קלפי נפתח בלחיצה
        על אתר, וגם בטבלה.</p>
-    <p><b>שטח</b> הסמן פרופורציוני למספר <b>בעלי זכות הבחירה</b> באתר, ו<b>צבעו</b> מציין את רמת
-       הסיכון או את אזור ההתנדבות — לפי הבחירה בלוח הצביעה.</p>
+    <p>ליד כל סמן מופיעים <b>מספרי הקלפיות</b> שבו. <b>שטח</b> הסמן פרופורציוני למספר <b>בעלי זכות
+       הבחירה</b> באתר, ו<b>צבעו</b> מציין את האשכול או את רמת הסיכון — לפי הבחירה בלוח הצביעה.</p>
     <p><b>המפה אינה מזוהה עם אף מפלגה.</b> אף צבע בה אינו מייצג מפלגה או מחנה פוליטי, ואין בה
        חישוב שמכוון לצד כלשהו.</p>
     <h3>רמת הסיכון</h3>
@@ -276,12 +329,15 @@ function renderAbout() {
        אתר שיש בו כמה קלפיות צבוע לפי הקלפי ברמת הסיכון הגבוהה ביותר בו, וכל הקלפיות שלו
        מפורטות בכרטיס שלו.</p>
     ${c.risk_differs.length ? `<p class="muted">ב-${c.risk_differs.length} קלפיות
-       (${esc(c.risk_differs.join(', '))}) הצבע ברשימת האזור שונה מהצבע ברשימה הארצית. המפה
-       משתמשת ברשימת האזור, שהיא רשימת העבודה, והצבע הארצי מופיע לצידו בכרטיס האתר.</p>` : ''}
-    <h3>אזורי ההתנדבות</h3>
+       (${esc(c.risk_differs.join(', '))}) הצבע ברשימת האשכול שונה מהצבע ברשימה הארצית. המפה
+       משתמשת ברשימת האשכול, שהיא רשימת העבודה, והצבע הארצי מופיע לצידו בכרטיס האתר.</p>` : ''}
+    <h3>האשכולות</h3>
+    <p>האשכולות הם החלוקה של רשימת הקלפיות לגיליונות — כל אשכול גיליון משלו, בצבע משלו —
+       וכל קלפי שייכת לאשכול אחד. מתנדבים שרוצים להיות יחד נרשמים לאותו אשכול ובוחרים בו
+       קלפיות סמוכות; מספרי הקלפיות מופיעים על המפה ליד כל אתר, וברשימה — אשכול אחר אשכול.</p>
     <ul>${AREAS.map(a => `<li><b>${esc(a.key)}</b>${a.desc ? ` — ${esc(a.desc)}` : ''}:
       ${nKalpi(a.n_kalpi)} ב${a.n_sites === 1 ? 'אתר אחד' : `-${num(a.n_sites)} אתרים`}</li>`).join('')}
-      ${HAS_UNASSIGNED ? `<li><b>ללא אזור</b>: ${nKalpi(c.unassigned.n_kalpi)} שאינן ברשימה של אף אזור</li>` : ''}</ul>
+      ${HAS_UNASSIGNED ? `<li><b>ללא אשכול</b>: ${nKalpi(c.unassigned.n_kalpi)} שאינן ברשימה של אף אשכול</li>` : ''}</ul>
     ${c.empty_areas.length ? `<p class="muted">${c.empty_areas.map(a => `"${esc(a.key)}"${a.desc ? ` (${esc(a.desc)})` : ''}`).join(', ')}
        ${c.empty_areas.length === 1 ? 'מופיע' : 'מופיעים'} ברשימה, אך עדיין לא שויכו ${c.empty_areas.length === 1 ? 'אליו' : 'אליהם'} קלפיות.</p>` : ''}
     <h3>נתוני 2022 — רקע בלבד</h3>
@@ -294,7 +350,7 @@ function renderAbout() {
        ${esc(IN_CITY)} ב-2022 היה ${pct(h.turnout)}, ובכל הארץ ${pct(h.national_turnout)}.</p>
     <h3>מקורות</h3>
     <ul>
-      <li>הקלפיות, רמת הסיכון ואזורי ההתנדבות — רשימת הקלפיות המעודכנת ל-${esc(date)}.</li>
+      <li>הקלפיות, האשכולות ורמת הסיכון — רשימת הקלפיות המעודכנת ל-${esc(date)}.</li>
       <li>נתוני 2022 — הקובץ הרשמי של ועדת הבחירות המרכזית (<code>expb.csv</code>, כנסת ה-25)
           וקובץ מקומות הקלפי שלה.</li>
       <li>קואורדינטות — OpenStreetMap: גאוקודינג של הכתובות (Nominatim), מבנים שזוהו בשמם (Overpass),
@@ -319,7 +375,7 @@ const SITE_COLS = [
   ['kalpi', 'קלפיות', s => esc(kalpiList(s)), s => kalpiNumKey(s)],
   ['name', 'אתר הצבעה', s => esc(s.name), s => s.name],
   ['address', 'כתובת', s => esc(addressOf(s)), s => addressOf(s)],
-  ['area', 'אזור', s => esc(areaLabel(s.area)), s => areaLabel(s.area)],
+  ['area', 'אשכול', s => esc(areaLabel(s.area)), s => areaLabel(s.area)],
   ['risk', 'רמת סיכון', s => riskCell(s.risk), s => RISK_RANK[s.risk] ?? 9],
   ['n_kalpi', 'מס׳ קלפיות', s => s.n_kalpi, s => s.n_kalpi],
   ['eligible', 'בעלי זכות', s => num(s.eligible), s => s.eligible],
@@ -333,7 +389,7 @@ const KALPI_COLS = [
   ['barzel', 'מספר ברזל', k => k.barzel, k => k.barzel],
   ['name', 'אתר הצבעה', k => esc(k.site), k => k.site],
   ['address', 'כתובת', k => esc(addressOf(k)), k => addressOf(k)],
-  ['area', 'אזור', k => esc(areaLabel(k.area)), k => areaLabel(k.area)],
+  ['area', 'אשכול', k => esc(areaLabel(k.area)), k => areaLabel(k.area)],
   ['risk', 'רמת סיכון', k => riskCell(k.risk), k => RISK_RANK[k.risk] ?? 9],
   ['eligible', 'בעלי זכות', k => num(k.eligible), k => k.eligible],
   ['streets', 'רחובות המצביעים', k => esc(k.streets), k => k.streets],
@@ -373,7 +429,7 @@ function chips(el, items, set) {
 chips($('#areaChips'), AREA_KEYS.map(k => [k, areaLabel(k), areaVar(k)]), state.areas);
 chips($('#riskChips'), RISKS.map(r => [r, riskLabel(r), riskVar(r)]), state.risks);
 
-const MODE_LABEL = { risk: 'רמת סיכון', area: 'אזור התנדבות' };
+const MODE_LABEL = { risk: 'רמת סיכון', area: 'אשכול' };
 // The row below already prints the count, so the folded summary says what is ACTIVE:
 // the colour mode, plus a note when a filter is hiding sites.
 function syncFilterSummary() {

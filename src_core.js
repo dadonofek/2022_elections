@@ -14,6 +14,11 @@
 //   syncFilterSummary()
 //   SITE_COLS, KALPI_COLS, kalpiRows, MOBILE_KEYS   the table view
 //   markerStyle(s, selected)   optional: extra Leaflet path options for a marker
+//   labelText(s), labelTitle(shown, total)   optional: what the map's labels say (the
+//                site's name by default) and the label button's tooltip
+//   LABEL_SIDES  optional: the sides of its marker a label may take, in order of
+//                preference (below only by default)
+//   LABEL_CLEAR_MARKERS  optional: true keeps labels off other sites' markers as well
 // and ends its start-up with startShell().
 
 // ---------------------------------------------------------------- helpers
@@ -141,34 +146,56 @@ function restyleMarkers() {
 }
 
 let labelLayer = L.layerGroup();
+const labelOf = s => (typeof labelText === 'function' ? labelText(s) : s.name);
+const labelSides = () => (typeof LABEL_SIDES !== 'undefined' ? LABEL_SIDES : ['bottom']);
+// A label's box on one side of its marker (container px, padded 3px left and right and
+// 1px above and below), and the tooltip offset that puts it there. The box is where the
+// label really renders: 4px clear of the marker, since Leaflet adds a 6px margin on the
+// tooltip's side to the offset. Below is the original placement; the other sides let
+// a label that collides below still find room before it is dropped.
+const LABEL_AT = {
+  bottom: (p, r, w, h) => [{ l: p.x - w / 2 - 3, r: p.x + w / 2 + 3, t: p.y + r + 3, bo: p.y + r + h + 5 }, [0, r - 2]],
+  top: (p, r, w, h) => [{ l: p.x - w / 2 - 3, r: p.x + w / 2 + 3, t: p.y - r - h - 5, bo: p.y - r - 3 }, [0, 2 - r]],
+  right: (p, r, w, h) => [{ l: p.x + r + 1, r: p.x + r + w + 7, t: p.y - h / 2 - 1, bo: p.y + h / 2 + 1 }, [r - 2, 0]],
+  left: (p, r, w, h) => [{ l: p.x - r - w - 7, r: p.x - r - 1, t: p.y - h / 2 - 1, bo: p.y + h / 2 + 1 }, [2 - r, 0]],
+};
 // Site labels are placed greedily, largest site first, and a label is dropped when
-// its box would overlap one already placed — so dense areas stay readable.
+// every side it may take would overlap one already placed — so dense areas stay readable.
+// With LABEL_CLEAR_MARKERS a side must also keep off every other site's marker, so a
+// label can't be read as that site's.
 function updateLabels() {
   labelLayer.clearLayers();
   if (!state.labels) { if (map.hasLayer(labelLayer)) map.removeLayer(labelLayer); return; }
   if (!map.hasLayer(labelLayer)) labelLayer.addTo(map);
   const bounds = map.getBounds().pad(0.02);
   const cand = visible().filter(s => s.lat != null && bounds.contains([s.lat, s.lon]))
-    .sort((a, b) => b.eligible - a.eligible);
-  const CH = 7.0, LH = 15;               // approx char width / line height at 11.5px
+    .sort((a, b) => b.eligible - a.eligible)
+    .map(s => ({ s, p: map.latLngToContainerPoint([s.lat, s.lon]), r: radiusOf(s) }));
+  const CH = 7.0, LH = 17;               // approx char width / line height at 11.5px
   const placed = [];
   const overlaps = (a, b) => !(a.r < b.l || a.l > b.r || a.bo < b.t || a.t > b.bo);
-  for (const s of cand) {
+  // whether a box reaches into a marker's circle, its 1px ring included
+  const covers = (b, m) => Math.hypot(Math.max(b.l - m.p.x, 0, m.p.x - b.r),
+    Math.max(b.t - m.p.y, 0, m.p.y - b.bo)) < m.r + 1;
+  const clearMarkers = typeof LABEL_CLEAR_MARKERS !== 'undefined' && LABEL_CLEAR_MARKERS;
+  for (const c of cand) {
     if (placed.length >= 70) break;
-    const p = map.latLngToContainerPoint([s.lat, s.lon]);
-    const w = Math.min(s.name.length * CH, 190);
-    const y = p.y + radiusOf(s) + 1;
-    const box = { l: p.x - w / 2 - 3, r: p.x + w / 2 + 3, t: y - 2, bo: y + LH + 2 };
-    if (placed.some(q => overlaps(box, q))) continue;
+    const { s, p, r } = c;
+    const w = Math.min(labelOf(s).length * CH, 190);
+    const free = box => !placed.some(q => overlaps(box, q))
+      && !(clearMarkers && cand.some(m => m !== c && covers(box, m)));
+    const side = labelSides().find(d => free(LABEL_AT[d](p, r, w, LH)[0]));
+    if (!side) continue;
+    const [box, offset] = LABEL_AT[side](p, r, w, LH);
     placed.push(box);
     L.marker([s.lat, s.lon], {
       icon: L.divIcon({ className: 'lbl-anchor', html: '', iconSize: [0, 0] }),
       interactive: false, keyboard: false })
-      .bindTooltip(esc(s.name), { permanent: true, direction: 'bottom', className: 'lbl',
-                                  offset: [0, radiusOf(s) - 2] })
+      .bindTooltip(esc(labelOf(s)), { permanent: true, direction: side, className: 'lbl', offset })
       .addTo(labelLayer).openTooltip();
   }
-  $('#btnLabels').title = `${placed.length} מתוך ${cand.length} שמות מוצגים — התקרבו כדי לראות עוד`;
+  $('#btnLabels').title = typeof labelTitle === 'function' ? labelTitle(placed.length, cand.length)
+    : `${placed.length} מתוך ${cand.length} שמות מוצגים — התקרבו כדי לראות עוד`;
 }
 map.on('zoomend', restyleMarkers);
 map.on('moveend zoomend', () => { if (state.labels) updateLabels(); });

@@ -29,6 +29,18 @@ volunteers use to choose where to register: where their volunteering place's sta
 are, which sit close together, which are risky — sent to every volunteer, so it must not
 lean to a party. `PRODUCT_DECISIONS.md` Round 6 has the asks and the decisions.
 
+**Round 7 — clusters and station numbers.** The coordinator then asked for *"a map with the
+different clusters and the station numbers so people can sign up"* — the route finder
+they already had (yalla-kalpi) gets a volunteer *to* a station, not to a cluster where
+friends can register together. The clusters are the list's own: one per per-place sheet,
+coloured by the community that staffs it — so they are the map's `area`, now called
+**אשכול** on screen. The map opens on the clusters, labels every building with its station
+numbers (`labelText` / `LABEL_SIDES` / `LABEL_CLEAR_MARKERS` hooks in `src_core.js`: a
+label tries all four sides of its marker and never covers another building's marker;
+Haifa keeps names below the marker, as before), and the list opens as a sign-up sheet — a
+header per cluster, its buildings in station order. Round 7 in `PRODUCT_DECISIONS.md`.
+The same round fixed tooltips drawn off their markers on both maps (bug 18 below).
+
 **Data.** The stations are the coming election's, from the observers' station list — a
 workbook with a national sheet and one sheet per volunteering place (`בית שמש 1` = רמת בית
 שמש, `בית שמש 2` = the old city). `import_station_list.py` copies only station facts from
@@ -49,6 +61,8 @@ nearest its own sub-quarter's sites. They are marked `provisional` in `geocache.
 **run `CITY=beit_shemesh ./build.sh` from a machine that can reach Nominatim** and
 `geocode.py` / `geocode_retry.py` will replace any it can answer. The site card says where a
 position is street-level, and every card has navigation links by the address itself.
+yalla-kalpi (`yalla-kalpi.pages.dev`) was suggested as a source for exact positions; it is
+blocked from the build sandbox as well, so whether it has coordinates is unchecked.
 
 `build_data.py` still **refuses** to emit a map while any site lacks coordinates
 (override with `ALLOW_MISSING_COORDS=1`), so a future half-geocoded city cannot ship quietly.
@@ -208,13 +222,15 @@ overwritten.**
 ## Tests
 
 The city's profile picks the scenario set. **Volunteer** (`CITY=beit_shemesh python3 test_map.py`):
-30 scenarios — both colour modes in both themes, a building with and one without 2022
-history (navigation links, the 2022 block), labels, both table levels (row counts equal the
-sites / the stations), the area and the risk filter (markers and list follow), search by a
-served street and by station number, the sort, the about panel, the narrow viewport and the
-same thirteen phone scenarios. **Every** scenario also asserts the map does not lean to a
-party: no bloc / potential / camp word on screen, and no marker filled outside the risk or
-area palette. All 30 pass as of handoff.
+31 scenarios — both colour modes in both themes (the map opens on the clusters), the
+station-number labels (on by default and all numeric, off, zoomed), the list's cluster
+headers (one per cluster by default, none in a flat sort), a building with and one without
+2022 history (navigation links, the 2022 block), both table levels (row counts equal the
+sites / the stations), the cluster and the risk filter (markers and list follow), search by
+a served street and by station number, the about panel, the narrow viewport and the same
+thirteen phone scenarios. **Every** scenario also asserts the map does not lean to a party:
+no bloc / potential / camp word on screen, and no marker filled outside the risk or cluster
+palette. All 31 pass as of handoff.
 
 **Analysis** — `python3 test_map.py` (all) or `python3 test_map.py dark` (one). 36 scenarios: light, dark,
 each color mode, each potential target, both camps, detail, labels, table, sorting, filter,
@@ -294,6 +310,13 @@ basemap tiles the suite still runs and marks those rows `*`.
     offline run spent ~15 minutes retrying and then told every later run the address did
     not exist. Three failures in a row now raise `Unreachable`: the stage stops, caches
     nothing for the addresses it could not ask, and says so.
+18. **Every Leaflet tooltip rendered one tooltip-width left of where Leaflet put it**, on
+    both maps: Leaflet moves a tooltip from its pane's left edge, but in an RTL page an
+    element with no `left` is anchored at the (zero-width) pane's *right* edge. The hover
+    card sat up to ~150px left of its marker and a site label under its neighbour — which
+    also broke the label collision test, since labels were not where it measured them.
+    Fixed with `.leaflet-tooltip{left:0}`. Checks, in every scenario of both maps:
+    `labelsOffMarker`, `labelOverlaps`, `tipOffCentre`.
 
 ## Product decisions
 
